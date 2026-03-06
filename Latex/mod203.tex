@@ -1,0 +1,89 @@
+% This is a LaTeX template kindly taken from Jernej Debevec.
+% Provided by Miha Muskinja for the purpose of the seminar I in the 1st year
+% of the 2nd cycle of the study of physics at the Faculty of Mathematics and Physics, University of Ljubljana.
+% I have edited it to suit my needs.
+
+% Set the document class and options
+\documentclass[10pt, titlepage, a4paper]{article}
+\usepackage[a4paper, inner=2.5cm, outer=2.5cm, top=2.25cm, bottom=2.25cm]{geometry}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{wrapfig}
+\usepackage{bm}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{accents}
+\hypersetup{colorlinks=true}
+\setlength{\parindent}{0pt}
+
+% Load the natbib package for citation style
+\usepackage{natbib}
+
+% Some macros for commonly used symbols in physics/quantum mechanics
+\newcommand{\bb}[1]{\bm#1}
+\newcommand{\dd}{\mathrm{d}}
+\newcommand{\pp}{\partial}
+\newcommand{\dg}{\dagger}
+\newcommand{\la}{\langle}
+\newcommand{\ra}{\rangle}
+\newcommand{\id}{\mathbb{1}}
+\newcommand{\T}{\mathsf{T}}
+\newcommand{\ua}{\uparrow\>}
+\newcommand{\da}{\downarrow\>}
+\newcommand{\mc}[1]{\mathcal{#1}}
+\newcommand\thickbar[1]{\accentset{\rule{.5em}{.03em}}{#1}}
+\renewcommand{\bar}{\thickbar}
+
+% Start the document
+\begin{document}
+
+% The title page
+\begin{titlepage}
+{\centering
+\includegraphics[width=6cm]{logo_fmf.pdf}
+
+\vspace{0.8cm}
+{\small Department of Physics}
+
+\vspace{5cm}
+\vspace{0.5cm}
+{\huge\textbf{[TITLE HERE]}} \\
+\vspace{0.5cm}
+{\large\textbf{[SUBTITLE HERE]}}
+
+\vfill
+\textbf{Author:} Marko Urbanč \\
+\textbf{Professor:}  \\ 
+\textbf{Advisor:}  \\
+
+\vspace{1cm}
+Ljubljana, [MONTH HERE] 2024 \\
+}
+\vspace{3cm}
+\end{titlepage}
+
+% Add table of contents
+\hypersetup{pageanchor=true}
+\pagenumbering{roman}
+\setcounter{page}{2}
+\tableofcontents
+\vspace{1cm}
+
+% Proceed with the main body
+\pagenumbering{arabic}
+
+% Sections based on typical Model Analysis structure
+\section{Introduction}
+\section{Task}
+\section{Solution Overview}
+\section{Results}
+\section{Conclusion and Comments}
+
+% Add references
+% \newpage
+% \bibliographystyle{unsrt}
+% \bibliography{main}
+
+% End document
+\end{document}

@@ -1,0 +1,19 @@
+.venv/
+.vscode/
+Code/__pycache__
+# Sources/
+# Data/
+*.npz
+!*_n.npz
+Models/
+*.pyc
+Latex/*
+!Latex/*.tex
+!Latex/*.bib
+!Latex/*.pdf
+!Latex/*.png
+!Latex/arch/
+*.h5
+!*_n.h5
+*.zip
+
