@@ -140,6 +140,8 @@ def find_eigenvalues(x, k_func, y_seed_func, shoot_par_range, n_scan=500):
             # If brentq fails, we can skip this bracket
             print(f"Warning: brentq failed to find a root between {left} and {right}. Skipping this bracket.")
             continue
+    
+    return eigenvalues
 
 def get_wavefunction(shoot_par, x, k_func, y_seed_func):
     """
