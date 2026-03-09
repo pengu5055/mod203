@@ -76,8 +76,6 @@ def hydrogen_analytic(r, n, l):
     rho = 2* r / n
     prefactor = np.sqrt((2/n)**3 * factorial(n-l-1) / (2*n * factorial(n+l)))
     laguerre = np.exp(-rho/2) * rho**l * genlaguerre(n-l-1, 2*l+1)(rho)
-    pol = genlaguerre(n-l-1, 2*l+1)(rho)
-    print(pol.max(), pol.min(), pol)
     return r * prefactor * laguerre
 
 def shoot(shoot_par, x, k_func, y_seed_func, renorm_every=None):

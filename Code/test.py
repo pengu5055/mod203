@@ -45,19 +45,19 @@ print(f"Time taken: {te - ts:.2f} seconds")
 colors = cmr.take_cmap_colors("cmr.tropical", 8, cmap_range=(0.0, 0.8))
 fig, ax = plt.subplots(1, 2, figsize=(12, 5))
 
-for i in range(1):
+for i in range(3):
     print(f"Plotting n={i+1} with E={eigenvalues[i]:.6f}")
     wave = get_wavefunction(eigenvalues[i], r_range, k_func, seed_func_out)
     ax[0].plot(r_range, wave, label=f"n={i+1}", color=colors[i])
-    # !ax[0].plot(r_range, hydrogen_analytic(r_range, n=i+1, l=0), label=f"Analytic n={i+1}", linestyle="--", color=colors[i])
+    ax[0].plot(r_range, hydrogen_analytic(r_range, n=i+1, l=0), label=f"Analytic n={i+1}", linestyle="--", color=colors[i])
     ax[1].plot(r_range, k_func(r_range, np.mean(eigenvalues[i])), label=f"n={i+1}", color=colors[i])
 
-s1 = r_range * np.exp(-r_range)
-nor = np.sqrt(np.trapezoid(s1**2, r_range))
-s1 /= nor
-print(f"Analytic normalization: {nor**2:.6f}")
+# s1 = r_range * np.exp(-r_range)
+# nor = np.sqrt(np.trapezoid(s1**2, r_range))
+# s1 /= nor
+# print(f"Analytic normalization: {nor**2:.6f}")
+# ax[0].plot(r_range, s1, label="1s Analytic", linestyle=":", color="black")
 
-ax[0].plot(r_range, s1, label="1s Analytic", linestyle=":", color="black")
 ax[0].set_title("Radial Wavefunctions")
 ax[0].set_xlabel("r")
 ax[0].set_ylabel("u(r)")
