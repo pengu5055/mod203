@@ -14,8 +14,8 @@ mpl.use("tkagg")
 
 ts = time()
 CACHE = False
-r_max = 40
-granularity = 10000
+r_max = 20
+granularity = 100
 r_range = np.linspace(1e-3, r_max, granularity)
 
 k_func = lambda r, E: k_hydrogen(r, E, l=0)
@@ -29,7 +29,7 @@ if not os.path.exists(fn) or not CACHE:
                                    shoot_par_range=(-0.6, -0.01), 
                                    shoot_func=shoot,
                                    n_scan=1000,
-                                   renorm_every=500)
+                                   renorm_every=10)
 
     print(f"Found {len(eigenvalues)} eigenvalues up to r={r_max} ")
     for i, e in enumerate(eigenvalues):
@@ -45,7 +45,7 @@ print(f"Time taken: {te - ts:.2f} seconds")
 colors = cmr.take_cmap_colors("cmr.tropical", 8, cmap_range=(0.0, 0.8))
 fig, ax = plt.subplots(1, 2, figsize=(12, 5))
 
-for i in range(3):
+for i in range(1):
     print(f"Plotting n={i+1} with E={eigenvalues[i]:.6f}")
     wave = get_wavefunction(eigenvalues[i], r_range, k_func, seed_func_out)
     ax[0].plot(r_range, wave, label=f"n={i+1}", color=colors[i])

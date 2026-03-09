@@ -50,7 +50,7 @@ def k_hydrogen(r, E, l, scale=1):
     Scale for numerical stability. Will be killed with normalization anyway,
     but might help avoid r=0 divergence.
     """
-    return -2 * (E + 1/r) + l*(l+1)/r**2
+    return -2 * scale * (E + 1/r) + l*(l+1)/r**2
     # return -(2/r - l*(l+1)/r**2 + E)  # BORKED: for some reason???
 
 def seed_hydrogen(r, E, l):
@@ -209,7 +209,12 @@ def scan_eigenvalues(x, k_func, y_seed_func, shoot_par_range, n_scan=500, shoot_
         shoot_func = shoot
     print("Performing initial scan for eigenvalues...")
     par_vals = np.linspace(shoot_par_range[0], shoot_par_range[1], n_scan)
-    residuals = np.array([shoot_func(par, x, k_func, y_seed_func, **kwargs) for par in par_vals])
+    # residuals = np.array([shoot_func(par, x, k_func, y_seed_func, **kwargs) for par in par_vals])
+    # Change to explicit loop for progress tracking
+    residuals = np.zeros(n_scan)
+    for i, par in enumerate(par_vals):
+        print(f"Scanning parameter {i+1}/{n_scan}...", end="\r")
+        residuals[i] = shoot_func(par, x, k_func, y_seed_func, **kwargs)
     brackets = []
     for i in range(len(par_vals) - 1):
         print(f"Checking pair {i}/{len(par_vals)-1}...", end="\r")
