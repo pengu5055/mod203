@@ -5,6 +5,13 @@ import numpy as np
 from scipy.optimize import brentq
 from scipy.special import factorial, genlaguerre
 
+def rerr(exact, approx):
+    """Relative error between exact and approximate solutions."""
+    return np.abs((exact - approx) / exact)
+
+def aerr(exact, approx, eps=1e-16):
+    """Absolute error between exact and approximate solutions."""
+    return np.abs(exact - approx) + eps
 
 def numerov(x, y, k, renorm_every=None):
     """
@@ -265,7 +272,66 @@ def find_eigenvalues(x, k_func, y_seed_func, shoot_par_range, n_scan=500, shoot_
     print("\nEigenvalue finding complete.")
     return eigenvalues
 
-def get_wavefunction(shoot_par, x, k_func, y_seed_func, blowup_threshold=None):
+def get_wavefunctions(eigenvalues, l, idx=None, n_eval=10000, multiple=5, r_min=1e-3):
+    """
+    Get the wavefunctions corresponding to the given eigenvalues by integrating the ODE with those eigenvalues as parameters.
+    The integration range is determined by the formula r_max = multiple * n^2, where n is the index of the eigenvalue (starting from 1). 
+    This is based on the fact that the radial extent of the hydrogenic wavefunctions scales roughly with n^2. The `multiple` parameter 
+    allows for some extra space.
+
+    Parameters
+    ----------
+    eigenvalues : np.ndarray
+        The eigenvalues for which to compute the wavefunctions.
+    l : int
+        The angular momentum quantum number to use in the k function and seed function.
+    idx : list of int, optional
+        The indices of the eigenvalues to compute wavefunctions for. If None, compute for all eigenvalues, by default None.
+    n_eval : int, optional
+        The number of spatial points to evaluate the wavefunction on, by default 10000.
+    multiple : float or list of float, optional
+        The multiple of n^2 to use for the maximum radius, by default 5. If a single float is provided, it will be used for all
+        eigenvalues. If a list is provided, it should have the same length as the number of eigenvalues and will specify the multiple for each one.
+    r_min : float, optional
+        The minimum radius to start integration from, by default 1e-3.
+
+    Returns
+    -------
+    x_ranges : list of np.ndarray
+        The spatial grids used for each wavefunction.
+    wavefunctions : list of np.ndarray
+        The computed wavefunctions corresponding to the given eigenvalues.
+    """
+    if idx is None:
+        idx = range(len(eigenvalues))
+
+    if np.isscalar(multiple):
+        multiples = [multiple] * len(eigenvalues)
+    else:
+        multiples = multiple
+        if len(multiples) != len(idx):
+            raise ValueError("Length of multiples list must match number of eigenvalues/idx.")
+
+    x_ranges = []
+    wavefunctions = []
+    k_func = lambda r, E: k_hydrogen(r, E, l=l)
+    seed_func_out = lambda r, E: seed_hydrogen(r, E, l=l)
+
+    for i in idx:
+        print(f"Getting wavefunction {i+1} with E={eigenvalues[i]:.6f}...")
+        n = i + 1
+        r_max = multiples[i] * n**2
+        r_range = np.linspace(r_min, r_max, n_eval)
+        
+        wave = _get_wf(eigenvalues[i], r_range, k_func, seed_func_out)
+
+        x_ranges.append(r_range)
+        wavefunctions.append(wave)
+
+    return x_ranges, wavefunctions
+
+
+def _get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None):
     """
     Get the wavefunction for a given parameter by integrating the ODE.
     Built in blowup handling: if the solution exceeds `blowup_threshold` times its peak value, 
