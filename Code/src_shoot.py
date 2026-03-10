@@ -188,16 +188,51 @@ def optimize_energy_fin(f, psi0, x, V, E_arr):
 
     return np.array(energy_list)
 
-def finpotwell(psi_init, upper, depth, h_):
+def finite_well_analytic(x, energy, n, depth, a):
+    """
+    Analytical solution for finite potential well. 
+    """
+    k = np.sqrt(energy)
+    kappa = np.sqrt((depth - energy))
+
+    print(f"Energy: {energy}, k: {k}, kappa: {kappa}")
+    print(np.cos(k*a))
+
+    psi = np.zeros_like(x)
+    interior = np.abs(x) < a
+    exterior = ~interior
+
+    # Even solutions
+    if n % 2 == 0:
+        # A\cos(kx) for |x| < width, B\exp(-kappa|x|) for |x| > width
+        psi[interior] = np.cos(k * x[interior])
+        psi[exterior] = np.cos(k * a) * np.exp(-kappa * (np.abs(x[exterior]) - a))
+    # Odd solutions
+    else:
+        # A\sin(kx) for |x| < width, B\exp(-kappa|x|) for |x| > width
+        psi[interior] = np.sin(k * x[interior])
+        psi[exterior] = np.sin(k * a) * np.exp(-kappa * (np.abs(x[exterior]) - a))
+
+    # Normalize
+    # norm = np.trapezoid(psi**2, x)
+    # return psi / np.sqrt(norm)
+    normalized_psi = normalize_all(psi)
+    return normalized_psi
+        
+
+def finpotwell(psi_init, upper, depth, h_, step=1):
     """Solves finite potential well numerically. Also returns eigenenergies."""
     x_arr_fpw = np.arange(-10, 10 + h_, h_)
     dim = len(x_arr_fpw)
-    pos = int(dim//2.2)
-    width = int(2*(dim/2 - pos))
+    # pos = int(dim//2.2)
+    # width = int(2*(dim/2 - pos))
+    pos = np.searchsorted(x_arr_fpw, -1.0)
+    width = np.searchsorted(x_arr_fpw, 1.0) - pos
     V_fpw = np.zeros(dim)
     V_fpw[:pos] = depth
     V_fpw[(pos + width):] = depth
-    E_arr = np.arange(1, upper, 5)  # Set initial guesses for eigen energies
+    # E_arr = np.arange(1, upper, step)  # Set initial guesses for eigen energies
+    E_arr = np.linspace(0.01, depth - 0.01, 10000)
     eigE = optimize_energy_fin(schrodinger2, psi_init, x_arr_fpw, V_fpw, E_arr)
     fpw_output = []
     for energy in eigE:
@@ -206,20 +241,9 @@ def finpotwell(psi_init, upper, depth, h_):
         fpw_output.append(normalize(out[0, :], pos, width))
 
     fpw_solve_analytical = []
-    for energy in eigE:
-        ana = np.empty(dim)
-        k = np.sqrt(energy)
-        l = np.sqrt(depth - energy)
-        A = 1
-        B = (k/l)*A
-        C = A*(np.cos(k*width/2) + (l/k)*np.sin(k*width/2))
-        D = A*(np.cos(k*width/2) - (l/k)*np.sin(k*width/2))
-        ana[:pos] = D*np.exp(l*x_arr_fpw[:pos])
-        ana[(pos + width):] = C*np.exp(-l*x_arr_fpw[(pos + width):])
-        ana[pos:(pos + width)] = A*np.cos(k*x_arr_fpw[pos:(pos + width)]) + B*np.sin(k*x_arr_fpw[pos:(pos + width)])
-        fpw_solve_analytical.append(normalize(ana, pos, width))
+    for n, energy in enumerate(eigE):
+        ana = finite_well_analytic(x_arr_fpw, energy, n, depth, 1.0)
+        fpw_solve_analytical.append(ana)
         
-        # fpw_solve_analytical.append(np.where(x_arr_fpw < -1, D*np.exp(l*x_arr_fpw), np.where(x_arr_fpw > 1, C*np.exp(-l*x_arr_fpw), A*np.cos(k*x_arr_fpw) + B*np.sin(k*x_arr_fpw))))
-
     return x_arr_fpw, np.array(fpw_output), np.array(fpw_solve_analytical), eigE, V_fpw
 

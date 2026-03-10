@@ -10,18 +10,21 @@ import os
 from time import time
 
 mpl.style.use("./vrm.mplstyle")
-mpl.use("qtagg")
+mpl.use("tkagg")
 
 l_min = 0
-l_max = 10
-r_max = 20
+l_max = 9
+r_max = 10.0
 granularity = 100000
 
 fn = f"./Data/hydrogen_eigenvalues_l{l_min}_to_{l_max}_r{r_max}_g{int(np.log10(granularity))}.npz"
 
 data = np.load(fn, allow_pickle=True)
 l_vals = data["l_vals"]
-eigenvalues = [data[f"k_{l_val}"] for l_val in l_vals]
+eigenvalues = [data[f"l_{l_val}"] for l_val in l_vals]
+
+for l_val in l_vals:
+    print(f"l={l_val}: Found {len(data[f'l_{l_val}'])} eigenvalues: {data[f'l_{l_val}']}")
 
 # Now stack l values into (l, max_eigenvalues) array for plotting
 max_eigenvalues = max(len(evs) for evs in eigenvalues)

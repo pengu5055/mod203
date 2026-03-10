@@ -12,7 +12,7 @@ from time import time
 from src_shoot import finpotwell
 
 mpl.style.use("./vrm.mplstyle")
-mpl.use("qtagg")
+mpl.use("tkagg")
 
 CACHE = True
 psi_0 = 0.0
@@ -20,15 +20,16 @@ psi_prime_0 = 1.0
 psi_init = np.array([psi_0, psi_prime_0])
 depth = 100
 scale = 50
-step_size = 1/20000
-upper = 90 
+step_size = 1/2000
+upper = 100 
 x_max = 10.0
+granularity_step = 1
 x_range = np.arange(-x_max, x_max + step_size, step_size)
-fn = f"./Data/particle_in_box_finite_upper{upper}_depth{depth}_step{step_size}_x{x_max}.npz"
+fn = f"./Data/particle_in_box_finite_upper{upper}_depth{depth}_step{step_size}_x{x_max}_gs{granularity_step}.npz"
 
 ts = time()
 if not os.path.exists(fn) or not CACHE:
-    fpw_x, fpw_psi, fpw_ana, fpw_E, fpw_V = finpotwell(psi_init, upper, depth, step_size)
+    fpw_x, fpw_psi, fpw_ana, fpw_E, fpw_V = finpotwell(psi_init, upper, depth, step_size, step=granularity_step)
     np.savez(fn, fpw_x=fpw_x, fpw_psi=fpw_psi, fpw_ana=fpw_ana, fpw_E=fpw_E, fpw_V=fpw_V)
 else:
     data = np.load(fn, allow_pickle=True)
@@ -41,6 +42,11 @@ else:
 te = time()
 print(f"Time taken: {te - ts:.2f} seconds")
 print(f"Found energy levels: {fpw_E}")
+
+# Truncate all to keep only 6 eigenvalues
+fpw_psi = fpw_psi[:6]
+fpw_ana = fpw_ana[:6]
+fpw_E = fpw_E[:6]
 
 fig, ax = plt.subplots(1, 2, figsize=(12, 6))
 colors = cmr.take_cmap_colors("cmr.tropical", len(fpw_E), cmap_range=(0.0, 0.8))
@@ -56,13 +62,15 @@ ax[0].set_ylim(-100, 125)
 ax[0].legend(frameon=False, loc="lower right")
 
 for i, (psi, ana) in enumerate(zip(fpw_psi, fpw_ana)):
-    ax[1].plot(fpw_x, aerr(ana, psi), label=f"$E_{i}={fpw_E[i]:.2f}$", color=colors[i])
+    # ax[1].plot(fpw_x, aerr(ana, psi), label=f"$E_{i}={fpw_E[i]:.2f}$", color=colors[i])
+    ax[1].plot(fpw_x, ana, label=f"$E_{i}={fpw_E[i]:.2f}$", color=colors[i], zorder=3)
 ax[1].set_xlabel('x')
 ax[1].set_ylabel('Absolute Error $| \psi_{ana} - \psi_{num} |$')
-ax[1].set_yscale('log')
 ax[1].set_title("Abs. Err. Compared to Analytical Solution")
 ax[1].set_xlim(-2, 2)
-ax[1].set_ylim(1e-9, 1e1)
+# ax[1].set_ylim(1e-9, 1e1)
+# ax[1].set_yscale('log')
+
 
 handles, labels = ax[1].get_legend_handles_labels()
 fig.legend(handles, labels, loc="lower center", ncol=7, frameon=False, prop={"size": 10, "weight": "medium"}, 
