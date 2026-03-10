@@ -6,15 +6,13 @@ from src import *
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import cmasher as cmr
-import os
-from time import time
 
 mpl.style.use("./vrm.mplstyle")
-mpl.use("tkagg")
+mpl.use("qtagg")
 
 k_start = 0.8
 k_end = 10.0
-N = 5
+N = 500
 x_max = 10.0
 granularity = 100000
 n_scan = 100
@@ -31,10 +29,20 @@ colors = cmr.take_cmap_colors("cmr.tropical", idx_max, cmap_range=(0.0, 0.8))
 
 for i, (k_val, evs) in enumerate(zip(k_vals, eigenvalues)):
     for j, lam in enumerate(sorted(evs)):
-        ax.scatter(k_val, lam, color=colors[j % len(colors)], s=20, label=f"Mode {j}" if i == 2 else "")
-ax.set_xlabel('k')
-ax.set_ylabel('$\lambda$')
-ax.set_title('Dispersion Relation $\lambda(k)$ for Fiber Modes')
-plt.legend(title="Modes", loc="upper left")
+        ax.scatter(k_val, lam, color=colors[j % len(colors)], s=20)
+
+# Generate legend handles for modes
+handles = []
+for j in range(idx_max):
+    handles.append(mpl.lines.Line2D([], [], marker="o", color=colors[j % len(colors)], linestyle="None", markersize=5, label=f"Mode {j+1}"))
+ax.legend(handles=handles, title="Modes", loc="upper left", title_fontproperties={"weight" : "medium"})
+
+ax.set_xlabel("k")
+ax.set_ylabel("$\lambda(k)$")
+
+plt.suptitle("Dispersion Relation $\lambda(k)$ for Fiber Modes", y=0.95)
+par_str = f"Evaluated with: $N={N}$, $x_{{max}}={x_max}$, $N_{{scan}}={n_scan}$, $\log_{{10}}(g)={int(np.log10(granularity))}$"
+plt.title(par_str, fontsize=12)
 plt.tight_layout()
+plt.savefig(f"./Images/fiber_dispersion_k{k_start}_to_{k_end}_N{N}_x{x_max}_g{int(np.log10(granularity))}.png", dpi=450)
 plt.show()
