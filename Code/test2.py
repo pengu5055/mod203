@@ -14,9 +14,9 @@ mpl.use("qtagg")
 
 ts = time()
 CACHE = True
-x_max = 20
+x_max = 5
 granularity = 100000
-k_val = 2
+k_val = 10
 lam_range = (1.0 * k_val + 1e-3, 2.0 * k_val - 1e-3)
 x_range = np.linspace(0.1, x_max, granularity)
 
@@ -56,13 +56,14 @@ xs, wfs = get_fiber_wavefunctions(eigenvalues, k_val, multiple=5, negate_k=False
 for i, (x, wave) in enumerate(zip(xs, wfs)):
     ax.plot(x, wave, label=f"$\lambda_{i}$", color=colors[i])
 
-ax.axvline(x=1, color='k', linestyle='--', alpha=0.5, label='core boundary')
+ax.axvline(x=1, color='k', linestyle='--', alpha=0.5)
 ax.set_xlabel('x')
 ax.set_ylabel('R(x)')
 plt.suptitle(f'Fiber modes k={k_val}')
 ax.legend()
 parstr = f"Evaluated with: $x_{{max}}={x_max}$, $N_{{scan}}=100$, $\log_{{10}}(g)={int(np.log10(granularity))}$ \n" + \
          f"multiple=5, inward_buffer=1000.0, mode='midpoint', core_idx=10, x_min=1e-3, n_eval=10000"
+ax.set_xlim(0, 1.5*x_max)
 plt.title(parstr, fontsize=10)
 plt.tight_layout()
 plt.savefig(f"./Images/hh_fiber_modes_k{k_val}_x{x_max}_g{int(np.log10(granularity))}.png", dpi=450)
