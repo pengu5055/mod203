@@ -14,7 +14,7 @@ mpl.use("tkagg")
 
 l_min = 0
 l_max = 9
-r_max = 10.0
+r_max = 500.0
 granularity = 100000
 
 fn = f"./Data/hydrogen_eigenvalues_l{l_min}_to_{l_max}_r{r_max}_g{int(np.log10(granularity))}.npz"
@@ -33,14 +33,16 @@ for i, evs in enumerate(eigenvalues):
     eigenvalues_array[i, :len(evs)] = evs
 
 fig, ax = plt.subplots(figsize=(8, 6))
-colors = cmr.get_sub_cmap("cmr.chroma", 0.0, 0.75)
+cm = cmr.get_sub_cmap("cmr.chroma", 0.0, 0.75)
+cm.set_bad(color="gray")
 norm = mpl.colors.Normalize(vmin=np.nanmin(eigenvalues_array), vmax=np.nanmax(eigenvalues_array))
 
-img = ax.imshow(eigenvalues_array.T, aspect='auto', cmap=colors, norm=norm, origin='lower',
-                extent=[l_vals[0], l_vals[-1], 1, max_eigenvalues])
+img = ax.imshow(eigenvalues_array.T, aspect='auto', cmap=cm, norm=norm, origin='lower',
+                extent=[l_vals[0], l_vals[-1], 1, max_eigenvalues], zorder=3)
 ax.set_xlabel("Angular Momentum Quantum Number $l$")
 ax.set_ylabel("Eigenvalue Index")
 ax.set_title("Eigenvalues for Hydrogen Atom as a Function of $l$")
+ax.grid(False)
 cbar = fig.colorbar(img, ax=ax)
 cbar.set_label("Eigenvalue")
 plt.tight_layout()

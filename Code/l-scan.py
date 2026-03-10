@@ -20,7 +20,7 @@ def hydrogen_worker(params):
     k_func = lambda r, E: k_hydrogen(r, E, l=l_val)
     seed_out = lambda r, E: seed_hydrogen(r, E, l=l_val)
 
-    eigenvalues = find_eigenvalues(r_range, k_func, seed_out, shoot_par_range=(-0.6, -0.01), 
+    eigenvalues = find_eigenvalues(r_range, k_func, seed_out, shoot_par_range=(-0.6, -0.0001), 
                                    shoot_func=shoot, n_scan=n_scan, renorm_every=1000)
     
     return i, l_val, eigenvalues
