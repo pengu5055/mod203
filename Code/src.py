@@ -4,6 +4,7 @@ Contains functions used throught the project.
 import numpy as np
 from scipy.optimize import brentq
 from scipy.special import factorial, genlaguerre, k0, k1
+import ray
 
 def rerr(exact, approx):
     """Relative error between exact and approximate solutions."""
@@ -12,6 +13,20 @@ def rerr(exact, approx):
 def aerr(exact, approx, eps=1e-16):
     """Absolute error between exact and approximate solutions."""
     return np.abs(exact - approx) + eps
+
+def init_ray():
+    """
+    Initialize Ray.
+    """
+    port = 8265
+    context = ray.init(address="auto",
+                       runtime_env={"working_dir": "./Code", "pip": ["numpy", "scipy"]},
+                       dashboard_port=port,
+                       )
+    url = context.dashboard_url if context.dashboard_url else "localhost"
+    print("Ray initialized")
+    print(f"Dashboard: {url}")
+    return context
 
 def numerov(x, y, k, renorm_every=None):
     """
