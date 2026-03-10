@@ -3,7 +3,7 @@ Contains functions used throught the project.
 """
 import numpy as np
 from scipy.optimize import brentq
-from scipy.special import factorial, genlaguerre
+from scipy.special import factorial, genlaguerre, k0, k1
 
 def rerr(exact, approx):
     """Relative error between exact and approximate solutions."""
@@ -405,9 +405,9 @@ def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
 
     x_ranges = []
     wavefunctions = []
-    k_func = lambda r, lam, k=k: k_fiber(r, lam, k=k)
-    seed_func_out = lambda r, lam: seed_fiber(r, lam)
-    seed_func_in = lambda r, lam, start_idx, k=k: seed_fiber_inward(r, lam, k, start_idx)
+    k_func = lambda r, lam: k_fiber(r, lam, k=k)
+    seed_func_out = lambda r, lam: seed_fiber(r, lam, k=k)
+    seed_func_in = lambda r, lam, start_idx: seed_fiber_inward(r, lam, k, start_idx)
 
     for i in idx:
         print(f"Getting wavefunction {i+1} with E={eigenvalues[i]:.6f}...")
@@ -415,7 +415,9 @@ def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
         x_range = np.linspace(x_min, x_max, n_eval)
         core_idx = np.searchsorted(x_range, 1.0)
         
-        wave = get_wf_midpoint(eigenvalues[i], x_range, k_func, (seed_func_out, seed_func_in), match_idx=core_idx, inward_buffer=5.0, negate_k=True)
+        # wave = get_wf_midpoint(eigenvalues[i], x_range, k_func, (seed_func_out, seed_func_in), match_idx=core_idx, inward_buffer=5.0, negate_k=True)
+        # wave = get_wf(eigenvalues[i], x_range, k_func, seed_func_out, blowup_threshold=None, negate_k=True)
+        wave = get_wf_fiber(eigenvalues[i], x_range, k_func, seed_func_out, k_val=k, core_idx=core_idx)
 
         x_ranges.append(x_range)
         wavefunctions.append(wave)
@@ -503,15 +505,50 @@ def get_wf_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_bu
     norm = np.trapezoid(y_full**2, x)
     return y_full / np.sqrt(norm)
 
+def get_wf_fiber(lam, x, k_func, seed_out, k_val, core_idx):
+    """
+    I'm desperate here.. x > 1 should analytically be K0. So lets 
+    pretend that numverov only applies in the core, and then match K0 at the boundary. 
+    """
+    # Numerical solution in core
+    k = -k_func(x, lam)
+    y0, y1 = seed_out(x, lam)
+    y_out = numerov(x[:core_idx+1], np.array([y0, y1]), -k[:core_idx+1])
+
+    # Match K0 at core boundary by derivative
+    gamma = np.sqrt(lam**2 - k_val**2)
+    h = x[1] - x[0]
+    dy_out = (y_out[-1] - y_out[-2]) / h
+    dk0 = -gamma * k1(gamma * x[core_idx])
+    scale = dy_out / dk0
+    
+    # Full solution
+    y_full = np.zeros(len(x))
+    y_full[:core_idx+1] = y_out
+    y_full[core_idx+1:] = scale * k0(gamma * x[core_idx+1:])
+
+    # Ensure continuity of sign at boundary
+    if y_full[core_idx] * y_full[core_idx+1] < 0:
+        y_full[core_idx+1:] *= -1
+
+    # Rescale y_out to match value at boundary
+    y_full[:core_idx+1] *= (y_full[core_idx+1] / y_out[-1])
+    
+    norm = np.trapezoid(y_full**2, x)
+    return y_full / np.sqrt(norm)
+
 def n_fiber(x):
     return np.where(x < 1, 2 - 0.5*x**2, 1.0)
 
 def k_fiber(x, lam, k):
     return 1/(4*x**2) + n_fiber(x)**2 * k**2 - lam**2
 
-def seed_fiber(x, lam):
-    return x[0]**(0.5), x[1]**(0.5)
+def seed_fiber(x, lam, k):
+    u2 = n_fiber(x[0])**2 * k**2 - lam**2
+    y0 = x[0]**(0.5) * (1 + u2 * x[0]**2 / 8)
+    y1 = x[1]**(0.5) * (1 + u2 * x[1]**2 / 8)
+    return y0, y1
 
-def seed_fiber_inward(x, lam, k_val, start_idx):
-    gamma = np.sqrt(lam**2 - k_val**2)
+def seed_fiber_inward(x, lam, k, start_idx):
+    gamma = np.sqrt(lam**2 - k**2)
     return np.exp(-gamma * x[start_idx]), np.exp(-gamma * x[start_idx-1])
