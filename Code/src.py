@@ -85,7 +85,7 @@ def hydrogen_analytic(r, n, l):
     laguerre = np.exp(-rho/2) * rho**l * genlaguerre(n-l-1, 2*l+1)(rho)
     return r * prefactor * laguerre
 
-def shoot(shoot_par, x, k_func, y_seed_func, renorm_every=None):
+def shoot(shoot_par, x, k_func, y_seed_func, renorm_every=None, negate_k=True):
     """
     Single shot using integration of the ODE with given parameters.
     Integrate with value `shoot_par` and return the boundary value
@@ -106,6 +106,9 @@ def shoot(shoot_par, x, k_func, y_seed_func, renorm_every=None):
         Passed to numerov function.
         If set, renormalize the solution every `renorm_every` steps to prevent
         overflow. Preserves zero structure but not amplitude. Default is None (no renorm).
+    negate_k : bool, optional
+        Whether to negate the k function when passing to numerov. This is because the standard form
+        of the ODE for Numerov is y'' = k(x) * y, but in our case we often have it in the form y'' = -k(x) * y.
 
     Returns
     -------
@@ -114,15 +117,15 @@ def shoot(shoot_par, x, k_func, y_seed_func, renorm_every=None):
     """
     k = k_func(x, shoot_par)
     y0, y1 = y_seed_func(x, shoot_par)
-    y = numerov(x, np.array([y0, y1]), -k, renorm_every=renorm_every)
+    y = numerov(x, np.array([y0, y1]), -k if negate_k else k, renorm_every=renorm_every)
 
     return y[-1]
 
-def shoot_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buffer=5.0):
+def shoot_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buffer=5.0, negate_k=True):
     """
-    Bidirectional shooting with log-derivative matching at a midpoint.
+    Bidirectional shooting with RMS normalized Wronskian condition residual.
 
-        discontinuity = (y_out'(x_m) / y_out(x_m)) - (y_in'(x_m) / y_in(x_m))
+        residual = y_out(match_idx) * dy_in(match_idx) - y_in(match_idx) * dy_out(match_idx)
     
     Parameters
     ----------
@@ -141,6 +144,9 @@ def shoot_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buf
     inward_buffer : float, optional
         Multiple of the turning point distance to use for inward integration window.
         e.g. 5.0 means integrate inward from 5x the turning point radius.
+    negate_k : bool, optional
+        Whether to negate the k function when passing to numerov. This is because the standard form
+        of the ODE for Numerov is y'' = k(x) * y, but in our case we often have it in the form y'' = -k(x) * y.
     
     Returns
     -------
@@ -148,7 +154,7 @@ def shoot_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buf
         Log-derivative discontinuity at match point.
     """
     y_seed_outward, y_seed_inward = y_seed_func
-    k = k_func(x, shoot_par)
+    k = -k_func(x, shoot_par) if negate_k else k_func(x, shoot_par)
 
     # Determine match point (classical turning point)
     if match_idx is None:
@@ -180,8 +186,32 @@ def shoot_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buf
     h = (x[match_idx+1] - x[match_idx])
     dy_out = (y_out[-1] - y_out[-2]) / h
     dy_in = (y_in[1] - y_in[0]) / h
+
+    if abs(y_out_m) < 1e-10 or abs(y_in_m) < 1e-10:
+        return np.nan # Try kill match point divergence
     
-    return (dy_out / y_out_m) - (dy_in / y_in_m)
+    # return (dy_out / y_out_m) - (dy_in / y_in_m)
+    # DEBUG:
+    # Return Wronskian condition instead
+    # Normalize at match point before Wronskian
+    # y_out_norm = y_out / y_out_m
+    # y_in_norm = y_in / y_in_m
+    # dy_out_norm = dy_out / y_out_m
+    # dy_in_norm = dy_in / y_in_m
+    # 
+    # return y_out_norm[-1] * dy_in_norm - y_in_norm[0] * dy_out_norm
+
+    # Turns out RMS normalization works much much better
+    y_out_rms = np.sqrt(np.mean(y_out**2))
+    y_in_rms = np.sqrt(np.mean(y_in**2))
+
+    y_out_n = y_out / y_out_rms
+    y_in_n = y_in / y_in_rms
+
+    dy_out_n = (y_out_n[-1] - y_out_n[-2]) / h
+    dy_in_n = (y_in_n[1] - y_in_n[0]) / h
+
+    return y_out_n[-1] * dy_in_n - y_in_n[0] * dy_out_n
 
 def scan_eigenvalues(x, k_func, y_seed_func, shoot_par_range, n_scan=500, shoot_func=None, **kwargs):
     """
@@ -223,6 +253,8 @@ def scan_eigenvalues(x, k_func, y_seed_func, shoot_par_range, n_scan=500, shoot_
     brackets = []
     for i in range(len(par_vals) - 1):
         print(f"Checking pair {i}/{len(par_vals)-1}...", end="\r")
+        if np.isnan(residuals[i]) or np.isnan(residuals[i+1]):
+            continue  # Skip pairs where either value is NaN
         if np.sign(residuals[i]) != np.sign(residuals[i+1]):
             brackets.append((par_vals[i], par_vals[i+1]))
 
@@ -272,9 +304,9 @@ def find_eigenvalues(x, k_func, y_seed_func, shoot_par_range, n_scan=500, shoot_
     print("\nEigenvalue finding complete.")
     return eigenvalues
 
-def get_wavefunctions(eigenvalues, l, idx=None, n_eval=10000, multiple=5, r_min=1e-3):
+def get_hydrogen_wavefunctions(eigenvalues, l, idx=None, n_eval=10000, multiple=5, r_min=1e-3):
     """
-    Get the wavefunctions corresponding to the given eigenvalues by integrating the ODE with those eigenvalues as parameters.
+    Get the hydrogen wavefunctions corresponding to the given eigenvalues by integrating the ODE with those eigenvalues as parameters.
     The integration range is determined by the formula r_max = multiple * n^2, where n is the index of the eigenvalue (starting from 1). 
     This is based on the fact that the radial extent of the hydrogenic wavefunctions scales roughly with n^2. The `multiple` parameter 
     allows for some extra space.
@@ -323,15 +355,71 @@ def get_wavefunctions(eigenvalues, l, idx=None, n_eval=10000, multiple=5, r_min=
         r_max = multiples[i] * n**2
         r_range = np.linspace(r_min, r_max, n_eval)
         
-        wave = _get_wf(eigenvalues[i], r_range, k_func, seed_func_out)
+        wave = get_wf(eigenvalues[i], r_range, k_func, seed_func_out)
 
         x_ranges.append(r_range)
         wavefunctions.append(wave)
 
     return x_ranges, wavefunctions
 
+def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, x_min=1e-3):
+    """
+    Get the fiber wavefunctions corresponding to the given eigenvalues by integrating the ODE with those eigenvalues as parameters.
+    The integration range is determined by wavefunction decay, which should be roughly exp(-gamma * x) where gamma ~ sqrt(lambda^2 - k^2).
+    We can estimate the decay length as 1/gamma, and set the maximum radius to be some multiple of that decay length to 
+    ensure we capture the wavefunction adequately.
 
-def _get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None):
+    Parameters
+    ----------
+    eigenvalues : np.ndarray
+        The eigenvalues for which to compute the wavefunctions.
+    k : float
+        The angular momentum quantum number to use in the k function and seed function.
+    idx : list of int, optional
+        The indices of the eigenvalues to compute wavefunctions for. If None, compute for all eigenvalues, by default None.
+    n_eval : int, optional
+        The number of spatial points to evaluate the wavefunction on, by default 10000.
+    multiple : float or list of float, optional
+        The multiple of the decay length to use for the maximum radius, by default 5. If a single float is provided, it will be used for all
+        eigenvalues. If a list is provided, it should have the same length as the number of eigenvalues and will specify the multiple for each one.
+    x_min : float, optional
+        The minimum radius to start integration from, by default 1e-3.
+
+    Returns
+    -------
+    x_ranges : list of np.ndarray
+        The spatial grids used for each wavefunction.
+    wavefunctions : list of np.ndarray
+        The computed wavefunctions corresponding to the given eigenvalues.
+    """
+    if idx is None:
+        idx = range(len(eigenvalues))
+
+    if np.isscalar(multiple):
+        multiples = [multiple] * len(eigenvalues)
+    else:
+        multiples = multiple
+        if len(multiples) != len(idx):
+            raise ValueError("Length of multiples list must match number of eigenvalues/idx.")
+
+    x_ranges = []
+    wavefunctions = []
+    k_func = lambda r, lam, k=k: k_fiber(r, lam, k=k)
+    seed_func_out = lambda r, lam: seed_fiber(r, lam)
+
+    for i in idx:
+        print(f"Getting wavefunction {i+1} with E={eigenvalues[i]:.6f}...")
+        x_max = 1 + multiples[i] / np.sqrt(eigenvalues[i]**2 - k**2)
+        x_range = np.linspace(x_min, x_max, n_eval)
+        
+        wave = get_wf(eigenvalues[i], x_range, k_func, seed_func_out, negate_k=True)
+
+        x_ranges.append(x_range)
+        wavefunctions.append(wave)
+
+    return x_ranges, wavefunctions
+
+def get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None, negate_k=True):
     """
     Get the wavefunction for a given parameter by integrating the ODE.
     Built in blowup handling: if the solution exceeds `blowup_threshold` times its peak value, 
@@ -351,6 +439,9 @@ def _get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None):
     blowup_threshold : float, optional
         The multiple of the peak value at which to consider the solution as 
         blowing up, by default None, which means no blowup handling.
+    negate_k : bool, optional
+        Whether to negate the k function when passing to numerov. This is because the standard form
+        of the ODE for Numerov is y'' = k(x) * y, but in our case we often have it in the form y'' = -k(x) * y.
 
     Returns
     -------
@@ -359,7 +450,7 @@ def _get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None):
     """
     k = k_func(x, shoot_par)
     y0, y1 = y_seed_func(x, shoot_par)
-    y = numerov(x, np.array([y0, y1]), -k)
+    y = numerov(x, np.array([y0, y1]), -k if negate_k else k)
     
     # Blowup Prevention
     if blowup_threshold is not None:
@@ -370,3 +461,16 @@ def _get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None):
     
     norm = np.trapezoid(y**2, x)
     return y / np.sqrt(norm)
+
+def n_fiber(x):
+    return np.where(x < 1, 2 - 0.5*x**2, 1.0)
+
+def k_fiber(x, lam, k):
+    return 1/(4*x**2) + n_fiber(x)**2 * k**2 - lam**2
+
+def seed_fiber(x, lam):
+    return x[0]**(0.5), x[1]**(0.5)
+
+def seed_fiber_inward(x, lam, k_val, start_idx):
+    gamma = np.sqrt(lam**2 - k_val**2)
+    return np.exp(-gamma * x[start_idx]), np.exp(-gamma * x[start_idx-1])

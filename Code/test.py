@@ -45,7 +45,7 @@ print(f"Time taken: {te - ts:.2f} seconds")
 colors = cmr.take_cmap_colors("cmr.tropical", len(eigenvalues), cmap_range=(0.0, 0.8))
 fig, ax = plt.subplots(1, 2, figsize=(12, 5))
 
-xs, wfs = get_wavefunctions(eigenvalues, 0, idx=[0, 1, 2, 3, 4], multiple=[10, 5, 5, 5, 5])
+xs, wfs = get_hydrogen_wavefunctions(eigenvalues, 0, idx=[0, 1, 2, 3, 4], multiple=[10, 5, 5, 5, 5])
 
 for i, (x, wave) in enumerate(zip(xs, wfs)):
     print(f"Plotting n={i+1} with E={eigenvalues[i]:.6f}")
