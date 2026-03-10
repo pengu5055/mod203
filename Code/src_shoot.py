@@ -87,6 +87,13 @@ def schrodinger(y, r, V, E):
 def schrodinger2(y, r, V, E):
     return (V - E) * y
 
+def analytic(x, k):
+    if k % 2 == 0:
+        return np.sin(k*0.5*np.pi*x)
+    else:
+        return np.cos(k*0.5*np.pi*x)
+
+
 def shoot_psi(f, psi0, x, V, E_arr):
     """"Shooting method: find zeroes of Schrödinger equation f with potential V for energies in array E_arr"""
     psi_right = []
@@ -190,7 +197,7 @@ def finpotwell(psi_init, upper, depth, h_):
     V_fpw = np.zeros(dim)
     V_fpw[:pos] = depth
     V_fpw[(pos + width):] = depth
-    E_arr = np.arange(1, upper, 5)  # Set initial guesses for eigen energies
+    E_arr = np.arange(1, upper, 1)  # Set initial guesses for eigen energies
     eigE = optimize_energy_fin(schrodinger2, psi_init, x_arr_fpw, V_fpw, E_arr)
     fpw_output = []
     for energy in eigE:
@@ -198,5 +205,15 @@ def finpotwell(psi_init, upper, depth, h_):
         out = symp_pefrl(schrodinger2, psi_init, x_arr_fpw, V_fpw, energy)
         fpw_output.append(normalize(out[0, :], pos, width))
 
-    return x_arr_fpw, np.array(fpw_output), eigE, V_fpw
+    fpw_solve_analytical = []
+    for energy in eigE:
+        k = np.sqrt(energy)
+        l = np.sqrt(depth - energy)
+        A = 1
+        B = (k/l)*A
+        C = A*(np.cos(k*width/2) + (l/k)*np.sin(k*width/2))
+        D = A*(np.cos(k*width/2) - (l/k)*np.sin(k*width/2))
+        fpw_solve_analytical.append(np.where(x_arr_fpw < -width/2, D*np.exp(l*x_arr_fpw), np.where(x_arr_fpw > width/2, C*np.exp(-l*x_arr_fpw), A*np.cos(k*x_arr_fpw) + B*np.sin(k*x_arr_fpw))))
+
+    return x_arr_fpw, np.array(fpw_output), np.array(fpw_solve_analytical), eigE, V_fpw
 
