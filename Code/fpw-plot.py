@@ -18,8 +18,8 @@ CACHE = True
 psi_0 = 0.0
 psi_prime_0 = 1.0
 psi_init = np.array([psi_0, psi_prime_0])
-depth = 5
-scale = 1
+depth = 100
+scale = 50
 step_size = 1/20000
 upper = 90 
 x_max = 10.0
@@ -52,7 +52,7 @@ ax[0].set_xlabel('x')
 ax[0].set_ylabel('$\psi(x)$')
 ax[0].set_title("Numerically Evaluated Wavefunctions")
 ax[0].set_xlim(-2, 2)
-# ax[0].set_ylim(-100, 125)
+ax[0].set_ylim(-100, 125)
 ax[0].legend(frameon=False, loc="lower right")
 
 for i, (psi, ana) in enumerate(zip(fpw_psi, fpw_ana)):
@@ -62,7 +62,7 @@ ax[1].set_ylabel('Absolute Error $| \psi_{ana} - \psi_{num} |$')
 ax[1].set_yscale('log')
 ax[1].set_title("Abs. Err. Compared to Analytical Solution")
 ax[1].set_xlim(-2, 2)
-# ax[1].set_ylim(1e-9, 1e1)
+ax[1].set_ylim(1e-9, 1e1)
 
 handles, labels = ax[1].get_legend_handles_labels()
 fig.legend(handles, labels, loc="lower center", ncol=7, frameon=False, prop={"size": 10, "weight": "medium"}, 

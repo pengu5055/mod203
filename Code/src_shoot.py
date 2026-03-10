@@ -197,7 +197,7 @@ def finpotwell(psi_init, upper, depth, h_):
     V_fpw = np.zeros(dim)
     V_fpw[:pos] = depth
     V_fpw[(pos + width):] = depth
-    E_arr = np.arange(1, upper, 1)  # Set initial guesses for eigen energies
+    E_arr = np.arange(1, upper, 5)  # Set initial guesses for eigen energies
     eigE = optimize_energy_fin(schrodinger2, psi_init, x_arr_fpw, V_fpw, E_arr)
     fpw_output = []
     for energy in eigE:
@@ -207,13 +207,19 @@ def finpotwell(psi_init, upper, depth, h_):
 
     fpw_solve_analytical = []
     for energy in eigE:
+        ana = np.empty(dim)
         k = np.sqrt(energy)
         l = np.sqrt(depth - energy)
         A = 1
         B = (k/l)*A
         C = A*(np.cos(k*width/2) + (l/k)*np.sin(k*width/2))
         D = A*(np.cos(k*width/2) - (l/k)*np.sin(k*width/2))
-        fpw_solve_analytical.append(np.where(x_arr_fpw < -width/2, D*np.exp(l*x_arr_fpw), np.where(x_arr_fpw > width/2, C*np.exp(-l*x_arr_fpw), A*np.cos(k*x_arr_fpw) + B*np.sin(k*x_arr_fpw))))
+        ana[:pos] = D*np.exp(l*x_arr_fpw[:pos])
+        ana[(pos + width):] = C*np.exp(-l*x_arr_fpw[(pos + width):])
+        ana[pos:(pos + width)] = A*np.cos(k*x_arr_fpw[pos:(pos + width)]) + B*np.sin(k*x_arr_fpw[pos:(pos + width)])
+        fpw_solve_analytical.append(normalize(ana, pos, width))
+        
+        # fpw_solve_analytical.append(np.where(x_arr_fpw < -1, D*np.exp(l*x_arr_fpw), np.where(x_arr_fpw > 1, C*np.exp(-l*x_arr_fpw), A*np.cos(k*x_arr_fpw) + B*np.sin(k*x_arr_fpw))))
 
     return x_arr_fpw, np.array(fpw_output), np.array(fpw_solve_analytical), eigE, V_fpw
 
