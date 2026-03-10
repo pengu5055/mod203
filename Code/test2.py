@@ -53,7 +53,7 @@ colors = cmr.take_cmap_colors("cmr.tropical", len(eigenvalues), cmap_range=(0.0,
     # wave = get_wf(lam, x, k_func, seed_func_out, negate_k=False)
     # ax.plot(x, wave, label=f"$\lambda_{i}$", color=colors[i])
 
-xs, wfs = get_fiber_wavefunctions(eigenvalues, 1.0, multiple=5)
+xs, wfs = get_fiber_wavefunctions(eigenvalues, 1.0, multiple=1)
 for i, (x, wave) in enumerate(zip(xs, wfs)):
     ax.plot(x, wave, label=f"$\lambda_{i}$", color=colors[i])
 

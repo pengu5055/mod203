@@ -364,6 +364,7 @@ def get_hydrogen_wavefunctions(eigenvalues, l, idx=None, n_eval=10000, multiple=
 
 def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, x_min=1e-3):
     """
+    BROKEN WITH get_wf_midpoint! Using get_wf does not really work as solution outside of core does NOT decay but oscillates.
     Get the fiber wavefunctions corresponding to the given eigenvalues by integrating the ODE with those eigenvalues as parameters.
     The integration range is determined by wavefunction decay, which should be roughly exp(-gamma * x) where gamma ~ sqrt(lambda^2 - k^2).
     We can estimate the decay length as 1/gamma, and set the maximum radius to be some multiple of that decay length to 
@@ -406,13 +407,15 @@ def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
     wavefunctions = []
     k_func = lambda r, lam, k=k: k_fiber(r, lam, k=k)
     seed_func_out = lambda r, lam: seed_fiber(r, lam)
+    seed_func_in = lambda r, lam, start_idx, k=k: seed_fiber_inward(r, lam, k, start_idx)
 
     for i in idx:
         print(f"Getting wavefunction {i+1} with E={eigenvalues[i]:.6f}...")
         x_max = 1 + multiples[i] / np.sqrt(eigenvalues[i]**2 - k**2)
         x_range = np.linspace(x_min, x_max, n_eval)
+        core_idx = np.searchsorted(x_range, 1.0)
         
-        wave = get_wf(eigenvalues[i], x_range, k_func, seed_func_out, negate_k=True)
+        wave = get_wf_midpoint(eigenvalues[i], x_range, k_func, (seed_func_out, seed_func_in), match_idx=core_idx, inward_buffer=5.0, negate_k=True)
 
         x_ranges.append(x_range)
         wavefunctions.append(wave)
@@ -461,6 +464,44 @@ def get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None, negate_k=Tr
     
     norm = np.trapezoid(y**2, x)
     return y / np.sqrt(norm)
+
+def get_wf_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buffer=1.0, negate_k=True):
+    """
+    BROKEN! 
+    """
+    y_seed_outward, y_seed_inward = y_seed_func
+    k = -k_func(x, shoot_par) if negate_k else k_func(x, shoot_par)
+
+    # Inward start
+    x_match = x[match_idx]
+    x_inward_start = inward_buffer * x_match
+    inward_start_idx = min(np.searchsorted(x, x_inward_start), len(x) - 1)
+
+    # Outward integration
+    y0, y1 = y_seed_outward(x, shoot_par)
+    y_out = numerov(x[:match_idx+2], np.array([y0, y1]), k[:match_idx+2])
+
+    # Inward integration
+    x_in = x[match_idx:inward_start_idx+1][::-1]
+    k_in = k[match_idx:inward_start_idx+1][::-1]
+    y_n, y_n1 = y_seed_inward(x, shoot_par, inward_start_idx)
+    y_in_flip = numerov(x_in, np.array([y_n, y_n1]), k_in)
+    y_in = y_in_flip[::-1]
+
+    # Normalize at match point
+    y_out = y_out * (y_in[0] / y_out[-1])
+
+    # Stitch together
+    y_full = np.zeros_like(x)
+    y_full[:match_idx+1] = y_out[:-1]
+    y_full[match_idx:inward_start_idx+1] = y_in
+
+    # and 0 beyond inward start
+    y_full[inward_start_idx+1:] = 0
+
+    # Normalize the full wavefunction
+    norm = np.trapezoid(y_full**2, x)
+    return y_full / np.sqrt(norm)
 
 def n_fiber(x):
     return np.where(x < 1, 2 - 0.5*x**2, 1.0)
