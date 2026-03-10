@@ -10,12 +10,12 @@ import cmasher as cmr
 mpl.style.use("./vrm.mplstyle")
 mpl.use("qtagg")
 
-k_start = 0.2
-k_end = 20.0
+k_start = 0.8
+k_end = 10.0
 N = 1000
 x_max = 10.0
 granularity = 100000
-n_scan = 100
+n_scan = 500
 
 fn = f"./Data/fiber_dispersion_k{k_start}_to_{k_end}_N{N}_x{x_max}_g{int(np.log10(granularity))}.npz"
 
