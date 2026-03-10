@@ -46,19 +46,24 @@ else:
 
 te = time()
 print(f"Time taken: {te - ts:.2f} seconds")
+print(f"Core boundary index: {core_boundary_idx}, x at core boundary: {x_range[core_boundary_idx]:.3f}")
 
 fig, ax = plt.subplots(figsize=(8, 5))
 colors = cmr.take_cmap_colors("cmr.tropical", len(eigenvalues), cmap_range=(0.0, 0.8))
 
-xs, wfs = get_fiber_wavefunctions(eigenvalues, k_val, multiple=5, negate_k=False, inward_buffer=25.0,
-                                  mode="midpoint", x_min=1e-3, n_eval=10000)
+xs, wfs = get_fiber_wavefunctions(eigenvalues, k_val, multiple=5, negate_k=False, inward_buffer=1000.0,
+                                  mode="midpoint", x_min=1e-3, n_eval=10000, core_idx=10)
 for i, (x, wave) in enumerate(zip(xs, wfs)):
     ax.plot(x, wave, label=f"$\lambda_{i}$", color=colors[i])
 
 ax.axvline(x=1, color='k', linestyle='--', alpha=0.5, label='core boundary')
 ax.set_xlabel('x')
 ax.set_ylabel('R(x)')
-ax.set_title(f'Fiber modes k={k_val}')
+plt.suptitle(f'Fiber modes k={k_val}')
 ax.legend()
+parstr = f"Evaluated with: $x_{{max}}={x_max}$, $N_{{scan}}=100$, $\log_{{10}}(g)={int(np.log10(granularity))}$ \n" + \
+         f"multiple=5, inward_buffer=1000.0, mode='midpoint', core_idx=10, x_min=1e-3, n_eval=10000"
+plt.title(parstr, fontsize=10)
 plt.tight_layout()
+plt.savefig(f"./Images/hh_fiber_modes_k{k_val}_x{x_max}_g{int(np.log10(granularity))}.png", dpi=450)
 plt.show()

@@ -166,7 +166,7 @@ def shoot_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buf
     Returns
     -------
     float
-        Log-derivative discontinuity at match point.
+        Wronskian condition residual at match point.
     """
     y_seed_outward, y_seed_inward = y_seed_func
     k = -k_func(x, shoot_par) if negate_k else k_func(x, shoot_par)
@@ -377,7 +377,8 @@ def get_hydrogen_wavefunctions(eigenvalues, l, idx=None, n_eval=10000, multiple=
 
     return x_ranges, wavefunctions
 
-def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, x_min=1e-3, mode="fiber", **kwargs):
+def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
+                            x_min=1e-3, mode="fiber", core_idx=None, **kwargs):
     """
     Get the fiber wavefunctions corresponding to the given eigenvalues by integrating the ODE with those eigenvalues as parameters.
     The integration range is determined by wavefunction decay, which should be roughly exp(-gamma * x) where gamma ~ sqrt(lambda^2 - k^2).
@@ -405,6 +406,10 @@ def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
             - "fiber": uses get_wf_fiber 
             - "midpoint": uses get_wf_midpoint (currently broken, do not use)
             - "standard": uses get_wf (not recommended for fiber modes due to non-decaying oscillations outside core)
+    core_idx: int, optional
+        The index in the x grid corresponding to the core boundary. If mode is "midpoint", this is required 
+        to determine the match point for the bidirectional shooting. If None, it will be 
+        estimated as the index where x crosses 1.0.
 
     Returns
     -------
@@ -433,7 +438,9 @@ def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
         print(f"Getting wavefunction {i+1} with E={eigenvalues[i]:.6f}...")
         x_max = 1 + multiples[i] / np.sqrt(eigenvalues[i]**2 - k**2)
         x_range = np.linspace(x_min, x_max, n_eval)
-        core_idx = np.searchsorted(x_range, 1.0)
+
+        if core_idx is None:
+            core_idx = np.searchsorted(x_range, 1.0)
         
         if mode == "midpoint":
             wave = get_wf_midpoint(eigenvalues[i], x_range, k_func, (seed_func_out, seed_func_in), 
@@ -525,7 +532,7 @@ def get_wf_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_bu
     y_full[match_idx:inward_start_idx+1] = y_in
 
     # Force sign continuity at match point
-    if y_full[match_idx] * y_full[match_idx-1] < 0:
+    if y_full[match_idx] * y_full[match_idx+1] < 0:
         y_full[:match_idx] *= -1
 
     # and 0 beyond inward start
