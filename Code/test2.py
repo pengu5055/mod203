@@ -10,13 +10,13 @@ import os
 from time import time
 
 mpl.style.use("./vrm.mplstyle")
-mpl.use("tkagg")
+mpl.use("qtagg")
 
 ts = time()
 CACHE = True
-x_max = 10
+x_max = 20
 granularity = 100000
-k_val = 5
+k_val = 2
 lam_range = (1.0 * k_val + 1e-3, 2.0 * k_val - 1e-3)
 x_range = np.linspace(0.1, x_max, granularity)
 
@@ -50,7 +50,8 @@ print(f"Time taken: {te - ts:.2f} seconds")
 fig, ax = plt.subplots(figsize=(8, 5))
 colors = cmr.take_cmap_colors("cmr.tropical", len(eigenvalues), cmap_range=(0.0, 0.8))
 
-xs, wfs = get_fiber_wavefunctions(eigenvalues, k_val, multiple=2)
+xs, wfs = get_fiber_wavefunctions(eigenvalues, k_val, multiple=5, negate_k=False, inward_buffer=25.0,
+                                  mode="midpoint", x_min=1e-3, n_eval=10000)
 for i, (x, wave) in enumerate(zip(xs, wfs)):
     ax.plot(x, wave, label=f"$\lambda_{i}$", color=colors[i])
 

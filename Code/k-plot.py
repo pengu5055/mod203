@@ -10,9 +10,9 @@ import cmasher as cmr
 mpl.style.use("./vrm.mplstyle")
 mpl.use("qtagg")
 
-k_start = 0.8
-k_end = 10.0
-N = 500
+k_start = 0.2
+k_end = 20.0
+N = 1000
 x_max = 10.0
 granularity = 100000
 n_scan = 100

@@ -377,9 +377,8 @@ def get_hydrogen_wavefunctions(eigenvalues, l, idx=None, n_eval=10000, multiple=
 
     return x_ranges, wavefunctions
 
-def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, x_min=1e-3):
+def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, x_min=1e-3, mode="fiber", **kwargs):
     """
-    BROKEN WITH get_wf_midpoint! Using get_wf does not really work as solution outside of core does NOT decay but oscillates.
     Get the fiber wavefunctions corresponding to the given eigenvalues by integrating the ODE with those eigenvalues as parameters.
     The integration range is determined by wavefunction decay, which should be roughly exp(-gamma * x) where gamma ~ sqrt(lambda^2 - k^2).
     We can estimate the decay length as 1/gamma, and set the maximum radius to be some multiple of that decay length to 
@@ -400,6 +399,12 @@ def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
         eigenvalues. If a list is provided, it should have the same length as the number of eigenvalues and will specify the multiple for each one.
     x_min : float, optional
         The minimum radius to start integration from, by default 1e-3.
+    mode: str, optional
+        The mode type to compute wavefunctions for, by default "fiber". This is used to
+        determine which method of integration to use. Options are:
+            - "fiber": uses get_wf_fiber 
+            - "midpoint": uses get_wf_midpoint (currently broken, do not use)
+            - "standard": uses get_wf (not recommended for fiber modes due to non-decaying oscillations outside core)
 
     Returns
     -------
@@ -430,9 +435,15 @@ def get_fiber_wavefunctions(eigenvalues, k, idx=None, n_eval=10000, multiple=5, 
         x_range = np.linspace(x_min, x_max, n_eval)
         core_idx = np.searchsorted(x_range, 1.0)
         
-        # wave = get_wf_midpoint(eigenvalues[i], x_range, k_func, (seed_func_out, seed_func_in), match_idx=core_idx, inward_buffer=5.0, negate_k=True)
-        # wave = get_wf(eigenvalues[i], x_range, k_func, seed_func_out, blowup_threshold=None, negate_k=True)
-        wave = get_wf_fiber(eigenvalues[i], x_range, k_func, seed_func_out, k_val=k, core_idx=core_idx)
+        if mode == "midpoint":
+            wave = get_wf_midpoint(eigenvalues[i], x_range, k_func, (seed_func_out, seed_func_in), 
+                                   match_idx=core_idx, **kwargs)
+        elif mode == "fiber":
+            wave = get_wf_fiber(eigenvalues[i], x_range, k_func, seed_func_out, k_val=k, core_idx=core_idx, **kwargs)
+        elif mode == "standard":
+            wave = get_wf(eigenvalues[i], x_range, k_func, seed_func_out, **kwargs)
+        else:
+            raise ValueError(f"Invalid mode '{mode}'. Valid options are 'midpoint', 'fiber', and 'standard'.")
 
         x_ranges.append(x_range)
         wavefunctions.append(wave)
@@ -482,7 +493,7 @@ def get_wf(shoot_par, x, k_func, y_seed_func, blowup_threshold=None, negate_k=Tr
     norm = np.trapezoid(y**2, x)
     return y / np.sqrt(norm)
 
-def get_wf_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buffer=1.0, negate_k=True):
+def get_wf_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_buffer=5.0, negate_k=True):
     """
     BROKEN! 
     """
@@ -512,6 +523,10 @@ def get_wf_midpoint(shoot_par, x, k_func, y_seed_func, match_idx=None, inward_bu
     y_full = np.zeros_like(x)
     y_full[:match_idx+1] = y_out[:-1]
     y_full[match_idx:inward_start_idx+1] = y_in
+
+    # Force sign continuity at match point
+    if y_full[match_idx] * y_full[match_idx-1] < 0:
+        y_full[:match_idx] *= -1
 
     # and 0 beyond inward start
     y_full[inward_start_idx+1:] = 0
