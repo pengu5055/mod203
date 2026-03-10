@@ -62,14 +62,15 @@ ax[0].set_ylim(-100, 125)
 ax[0].legend(frameon=False, loc="lower right")
 
 for i, (psi, ana) in enumerate(zip(fpw_psi, fpw_ana)):
-    # ax[1].plot(fpw_x, aerr(ana, psi), label=f"$E_{i}={fpw_E[i]:.2f}$", color=colors[i])
-    ax[1].plot(fpw_x, ana, label=f"$E_{i}={fpw_E[i]:.2f}$", color=colors[i], zorder=3)
+    ax[1].plot(fpw_x, aerr(ana, psi), label=f"$E_{i}={fpw_E[i]:.2f}$", color=colors[i])
+    # ax[1].plot(fpw_x, ana, label=f"$E_{i}={fpw_E[i]:.2f}$", color=colors[i], zorder=3)
+
 ax[1].set_xlabel('x')
-ax[1].set_ylabel('Absolute Error $| \psi_{ana} - \psi_{num} |$')
+ax[1].set_ylabel('Absolute Error $| \psi_{\\text{ana}} - \psi_{\\text{num}} |$')
 ax[1].set_title("Abs. Err. Compared to Analytical Solution")
 ax[1].set_xlim(-2, 2)
-# ax[1].set_ylim(1e-9, 1e1)
-# ax[1].set_yscale('log')
+ax[1].set_ylim(1e-8, 1e2)
+ax[1].set_yscale('log')
 
 
 handles, labels = ax[1].get_legend_handles_labels()

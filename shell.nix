@@ -26,7 +26,7 @@ pkgs.mkShell {
       setuptools
       wheel
       tkinter
-      pyqt6  # -> Enable if HiDPI Display, GNOME likes Qt more than tk
+      # pyqt6  # -> Enable if HiDPI Display, GNOME likes Qt more than tk
     ]) ++ [
       py
     ];
