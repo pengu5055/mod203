@@ -47,6 +47,15 @@ for i, l_val in enumerate(l_vals):
 # Take abs deviations
 eigenvalues_array = np.abs(eigenvalues_array)
 
+# Evaluate Avg. Abs. Dev. for Wavefunction via Shooting vs. Analytical
+wf_abs_devs = np.full((len(l_vals), max_eigenvalues), np.nan)
+for i, l_val in enumerate(l_vals):
+    l_eig = eigenvalues[i]
+    x_ranges, wf_shoot = get_hydrogen_wavefunctions(l_eig, l=l_val)
+    wf_ana = np.array([hydrogen_analytic(x_ranges[i], n=l_val + 1 + j, l=l_val) for j in range(len(l_eig))])
+
+    wf_abs_devs[i, :len(l_eig)] = np.array([np.mean(np.abs(wf_shoot[j] - wf_ana[j])) for j in range(len(l_eig))])
+
 fig, ax = plt.subplots(1, 2, figsize=(12, 7))
 cm = cmr.get_sub_cmap("cmr.tropical", 0.0, 0.8)
 cm.set_bad(color="black")
@@ -60,40 +69,54 @@ ax[0].set_title("Relative Deviation of Numerical Values\nfrom Theoretical Energy
 ax[0].grid(False)
 cbar = fig.colorbar(img, ax=ax[0], label=r"$|\Delta E|/E_{\text{Theory}}$ from $E_j = -\frac{1}{2j^2}$ for $j = l + 1, l + 2, ...$")
 
-# Add black rectangle patch for bad data legend
-bad_patch = Patch(color='black', label='No Eigenvalue Found')
-ax[0].legend(handles=[bad_patch], loc='upper right', frameon=True)
 
-# Plot grid for easier visualization
-ls_box = np.linspace(l_vals[0], l_vals[-1], len(l_vals)+1)
-print(eigenvalues_array.T.shape)
-hs_box = np.linspace(1, max_eigenvalues, max_eigenvalues+1)
-for i in range(len(ls_box)):
-    for j in range(len(hs_box)):
-        x1 = np.array([ls_box[i], ls_box[i]])
-        y1 = np.array([hs_box[j], hs_box[j-1]])
-        x2 = np.array([ls_box[i-1], ls_box[i]])
-        y2 = np.array([hs_box[j], hs_box[j]])
 
-        flag = np.isnan(eigenvalues_array[i-1, j-1])
-        if flag:
-            grid_c = "white"
-        else:
-            grid_c = "black"
+for a in ax:
+    # Center ticks on integer l values and eigenvalue indices
+    a.set_xticks(l_vals + 0.5 - np.array([(j-1)/len(l_vals) for j in range(1, len(l_vals)+1)]))
+    a.set_xticklabels([f"{l}" for l in l_vals])
+    a.set_yticks((np.arange(1, max_eigenvalues + 1) + 0.5) - np.array([(j-1)/max_eigenvalues for j in range(1, max_eigenvalues + 1)]))
+    a.set_yticklabels([f"{j}" for j in range(1, max_eigenvalues + 1)])
 
-        ax[0].plot(x1, y1, color=grid_c, lw=0.5, zorder=2)
-        ax[0].plot(x2, y2, color=grid_c, lw=0.5, zorder=2)
-        ax[0].plot([ls_box[0], ls_box[0]], [hs_box[0], hs_box[-1]], color="k", lw=2.5, zorder=2)
-        ax[0].plot([ls_box[-1], ls_box[-1]], [hs_box[0], hs_box[-1]], color="k", lw=2.5, zorder=2)
-        ax[0].plot([ls_box[0], ls_box[-1]], [hs_box[0], hs_box[0]], color="k", lw=2, zorder=2)
-        ax[0].plot([ls_box[0], ls_box[-1]], [hs_box[-1], hs_box[-1]], color="k", lw=2, zorder=2)
+    # Add black rectangle patch for bad data legend
+    bad_patch = Patch(color='black', label='No Eigenvalue Found')
+    a.legend(handles=[bad_patch], loc='upper right', frameon=True)
+    
+    # Plot grid for easier visualization
+    ls_box = np.linspace(l_vals[0], l_vals[-1], len(l_vals)+1)
+    hs_box = np.linspace(1, max_eigenvalues, max_eigenvalues+1)
+    for i in range(len(ls_box)):
+        for j in range(len(hs_box)):
+            x1 = np.array([ls_box[i], ls_box[i]])
+            y1 = np.array([hs_box[j], hs_box[j-1]])
+            x2 = np.array([ls_box[i-1], ls_box[i]])
+            y2 = np.array([hs_box[j], hs_box[j]])
 
-# Center ticks on integer l values and eigenvalue indices
-ax[0].set_xticks(l_vals + 0.5 - np.array([(j-1)/len(l_vals) for j in range(1, len(l_vals)+1)]))
-ax[0].set_xticklabels([f"{l}" for l in l_vals])
-ax[0].set_yticks((np.arange(1, max_eigenvalues + 1) + 0.5) - np.array([(j-1)/max_eigenvalues for j in range(1, max_eigenvalues + 1)]))
-ax[0].set_yticklabels([f"{j}" for j in range(1, max_eigenvalues + 1)])
+            flag = np.isnan(eigenvalues_array[i-1, j-1])
+            if flag:
+                grid_c = "white"
+            else:
+                grid_c = "black"
 
+            a.plot(x1, y1, color=grid_c, lw=0.5, zorder=2)
+            a.plot(x2, y2, color=grid_c, lw=0.5, zorder=2)
+            a.plot([ls_box[0], ls_box[0]], [hs_box[0], hs_box[-1]], color="k", lw=2.5, zorder=2)
+            a.plot([ls_box[-1], ls_box[-1]], [hs_box[0], hs_box[-1]], color="k", lw=2.5, zorder=2)
+            a.plot([ls_box[0], ls_box[-1]], [hs_box[0], hs_box[0]], color="k", lw=2, zorder=2)
+            a.plot([ls_box[0], ls_box[-1]], [hs_box[-1], hs_box[-1]], color="k", lw=2, zorder=2)
+
+norm2 = mpl.colors.LogNorm(vmin=np.nanmin(wf_abs_devs), vmax=np.nanmax(wf_abs_devs))
+img2 = ax[1].imshow(wf_abs_devs.T, aspect='auto', cmap=cm, norm=norm2, origin='lower',
+                extent=[l_vals[0], l_vals[-1], 1, max_eigenvalues], zorder=1)
+ax[1].set_xlabel("Angular Momentum Quantum Number $l$")
+ax[1].set_ylabel("Eigenvalue Index $j$")
+ax[1].set_title("Average Absolute Deviation of\nNumerical Wavefunction from Analytical Solution")
+ax[1].grid(False)
+cbar2 = fig.colorbar(img2, ax=ax[1], label=r"$\overline{|\psi_{\text{num}} - \psi_{\text{ana}}|}$")
+plt.suptitle(f"Accuracy of Numerical Hydrogen Eigenvalues and Wavefunctions Compared to Theory")
 plt.tight_layout()
+plt.subplots_adjust(top=0.82)
+par_str = f"Evaluated for $l\in[{l_min}, {l_max}]$, $r_{{max}}={r_max}$, $g={int(np.log10(granularity))}$, $n_{{scan}}=5000$"
+plt.text(0.5, 0.93, par_str, ha='center', va='center', transform=plt.gcf().transFigure, fontsize=10, weight="medium")
 plt.savefig(f"./Images/hydrogen_eigenvalues_l{l_min}_to_{l_max}_r{r_max}_g{int(np.log10(granularity))}.png", dpi=450)
 plt.show()
