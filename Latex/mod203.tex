@@ -14,11 +14,25 @@
 \usepackage{amssymb}
 \usepackage{float}
 \usepackage{accents}
+\usepackage{cleveref}
 \hypersetup{colorlinks=true}
 \setlength{\parindent}{0pt}
 
 % Load the natbib package for citation style
-\usepackage{natbib}
+\usepackage[
+    backend=biber,
+    style=numeric,
+    natbib=true,
+    sorting=none,
+    url=false, 
+    doi=true,
+    eprint=false
+]{biblatex}
+\addbibresource{mod203.bib}
+\DeclareFieldFormat{doi}{%
+    \textsc{doi}\addcolon\space
+    \href{https://doi.org/#1}{\textcolor{red}{\nolinkurl{#1}}}%
+}
 
 % Some macros for commonly used symbols in physics/quantum mechanics
 \newcommand{\bb}[1]{\bm#1}
@@ -35,6 +49,21 @@
 \newcommand\thickbar[1]{\accentset{\rule{.5em}{.03em}}{#1}}
 \renewcommand{\bar}{\thickbar}
 
+% Code highlighting
+\usepackage{minted}
+\usepackage{listings}
+\usepackage{tcolorbox}
+\usepackage[export]{adjustbox}
+\tcbuselibrary{listings, minted, skins, breakable}
+
+\newtcblisting{pythonlst}{listing only, minted language=python3, minted style=paraiso-dark,
+    colback=bg, enhanced jigsaw, frame hidden, breakable=true, minted options={, 
+    fontsize=\footnotesize, tabsize=2, breaklines, autogobble}}
+
+\setminted[python3]{bgcolor=bg, fontsize=\footnotesize}
+\definecolor{inline}{RGB}{187,57,82}
+\definecolor{bg}{RGB}{40,40,40}
+
 % Start the document
 \begin{document}
 
@@ -48,17 +77,18 @@
 
 \vspace{5cm}
 \vspace{0.5cm}
-{\huge\textbf{[TITLE HERE]}} \\
+{\huge\textbf{Solving Eigenvalue Problems via the Shooting Method}} \\
 \vspace{0.5cm}
-{\large\textbf{[SUBTITLE HERE]}}
+{\large\textbf{3. Assignment for Model Analysis 2, 2025/26}}
 
 \vfill
-\textbf{Author:} Marko Urbanč \\
-\textbf{Professor:}  \\ 
-\textbf{Advisor:}  \\
+\textbf{Author:} Marko Urbanč (28232019) \\
+\textbf{Professor:} Prof. dr. Simon Širca  \\ 
+\textbf{Advisor:}  doc. dr. Miha Mihovilovič \\
+
 
 \vspace{1cm}
-Ljubljana, [MONTH HERE] 2024 \\
+Ljubljana, March 2026 \\
 }
 \vspace{3cm}
 \end{titlepage}
@@ -75,7 +105,58 @@ Ljubljana, [MONTH HERE] 2024 \\
 
 % Sections based on typical Model Analysis structure
 \section{Introduction}
-\section{Task}
+Last week we took a look at how we can use the shooting method to solve Boundary Value Problems (BVPs) which we applied to a mechanical problem where we evaluated 
+wavemodes of a rotating massive rope and classified orbits in the Hénon-Heiles potential. This week we will see that the shooting method is also applicable to a somewhat different 
+class of problems, namely to eigenvalue problems. We will then apply this method to find the eigenenergies and eigenfunctions of the hydrogen atom (its radial part, to be precise) 
+and for solving a \textit{graded index fiber} problem which is described by the Helmholtz equation. 
+
+\section{Assignment Description}
+\subsection{Hydrogen Atom}
+The first part of the assignment is to solve the radial part of the Schrödinger equation with a Coulomb potential, which is a well-known problem in quantum mechanics and 
+describes the hydrogen atom. For the hydrogen atom, the equation can be written as:
+%
+\begin{equation}
+    \left[-\frac{\dd^2}{\dd x^2}-\frac{2}{x} + \frac{l(l+1)}{x^2}- e\right] R(x) = 0\>,\qquad \text{with } R(0) = 0 \text{ and } R(x\to\infty) = 0\>,
+\end{equation}
+%
+where $\psi(x) = x R(x)$ is the radial wavefunction, $x = r/a_0$ is the dimensionless radial coordinate, $a_0$ is the Bohr radius, and $e = E/E_0$ is the dimensionless
+energy with $E_0$ being the Rydberg energy. The assignment challenges us to use the Numerov method to solve this problem instead of opting for the standard Runge-Kutta integrator.
+We can then compare our numerical results to the analytical solutions. For eigenenergies, we expect to find the well-known formula $E_n = -\frac{1}{2n^2} E_0$ where $n$ is the principal quantum number. 
+A state with angular momentum quantum number $l$ will start from the $n = l + 1$ energy level. For the eigenfunctions, we can write the analytical solution as:
+%
+\begin{equation}
+    \psi_{n,l}(x) = \sqrt{\left(\frac{2}{na^*_0}\right)^3\frac{(n-l-1)!}{2n(n+l)!}} e^{-\rho/2} \rho^l L_{n-l-1}^{2l+1}(\rho)\>,
+\end{equation}
+%
+where $\rho = 2x/(na^*_0)$ and $a^*_0$ is the reduced Bohr radius. In our case we've set $a^*_0 = 1$ for simplicity. The functions $L_{n-l-1}^{2l+1}(\rho)$ are the
+generalized Laguerre polynomials of degree $n-l-1$ and order $2l+1$.
+
+\subsection{Graded Index Fiber}
+The second part of the assignment is to solve the Helmholtz equation for a graded index fiber, which is a type of optical fiber where the refractive index changes gradually with the radius.
+In our case, the refractive index is given by:
+%
+\begin{equation}
+    n(x) = \begin{cases}
+    2 - \frac{x^2}{2} & \text{for } x < 1 \\
+    1 & \text{for } x \geq 1
+    \end{cases}\>.
+\end{equation}
+%
+The behavior of light in such a fiber can be described by the Helmholtz equation, which is in general given as:
+%
+\begin{equation}
+    \left(\nabla^2 + k^2(\bb{r})k^2\right) \psi(\bb{r}) = 0\>.
+\end{equation}
+%
+Using the trick of cylindrical symmetry, we can use the ansatz $\psi(x) - \left(R(x)/\sqrt{x}\right) e^{i\lambda z}$ to reduce the problem to a one-dimensional equation for $R(x)$:
+%
+\begin{equation}
+    \left[\frac{\dd^2}{\dd x^2} + \frac{1}{4x^2} + n^2(x)k^2 - \lambda^2\right] R(x) = 0\>,\qquad \text{with } R(0) = 0 \text{ and } R(x\to\infty) = 0\>.
+\end{equation}
+%
+Here, $\lambda$ is the propagation constant of the mode. The assignment tasks us to find the dispersion relation $\lambda(k)$ for $0.8 \leq k \leq 10$ and to determine which 
+wave numbers $k$ only to single bound state exists (i.e., \textit{single mode fiber}).
+
 \section{Solution Overview}
 \section{Results}
 \section{Conclusion and Comments}
