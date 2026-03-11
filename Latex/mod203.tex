@@ -164,6 +164,7 @@ The shooting method made use of the root finding capabilities of \texttt{scipy.o
 problems were solved with a PEFRL (Position Extended Forest-Ruth Like) symplectic integrator which I also implemented myself. I wanted to make sure that the shooting method was working independent of 
 the choice of the integrator. For larger parameter sweeps, I again made use of \texttt{ray} to distribute tasks across multiple CPU cores. \\
 
+\subsection{Sanity Check: Infinite and Finite Potential Well}
 Last week I complained about the lack of a \textit{sanity check} problem I could solve to verify that my implementation of the shooting method was working correctly. This week I am fortunate that 
 eigenvalue problems are very common in physics and that there are many well-known problems with known analytical solutions that I can use to verify my implementation. As a start, 
 \Cref{fig:ipw-wf} shows the results of eigenenergies, eigenfunctions and their absolute errors for the infinite potential well problem aka a particle in a box. This problem was 
@@ -172,8 +173,8 @@ evaluated using the PEFRL integrator with step size of $h = 1/10^4$ and a max en
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../Images/particle_in_box_infinite_upper500_step0.0001.png}
-    \label{fig:ipw-wf}
     \caption{Eigenfunctions and energies for the infinite potential well problem. The left panel shows the numerically obtained eigenfunctions. The right panel shows the absolute error compared to the known analytical solutions.}
+    \label{fig:ipw-wf}
 \end{figure}
 
 We see my beloved PEFRL working its magic in the right panel where I've compared the numerical solution to the analytical one. The agreement is excellent, at machine precision for all except 
@@ -186,15 +187,15 @@ which corresponds to the correct eigenenergies. We can see how neatly the roots 
 \begin{figure}[H]
     \centering
     \includegraphics[width=0.6\textwidth]{../Images/shooting_residuals.png}
-    \label{fig:ipw-shoot}
     \caption{Residuals of the shooting method for the infinite potential well problem. The roots of the residuals correspond to the eigenenergies.}
+    \label{fig:ipw-shoot}
 \end{figure}
 %
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../Images/particle_in_box_finite_upper100_depth100_step0.0005.png}
-    \label{fig:fpw-wf}
     \caption{Eigenfunctions and energies for the finite potential well problem. The left panel shows the numerically obtained eigenfunctions. The right panel shows the absolute error compared to the known analytical solutions.}
+    \label{fig:fpw-wf}
 \end{figure}
 %
 If we want to be \textbf{extra} sure that everything is working, we can also look at the related problem of the finite potential well, which also has known analytical solutions. 
@@ -216,8 +217,8 @@ Eigenenergies were found using the shooting method with the Numerov integrator, 
 \begin{figure}[H]
     \centering
     \includegraphics[width=\textwidth]{../Images/hydrogen_eigenvalues_l0_to_9_r500.0_g5.png}
-    \label{fig:hydrogen}
     \caption{Eigenenergies and eigenfunctions for the hydrogen atom problem. The left panel shows the numerically obtained eigenenergies (dots) compared to the analytical formula (lines). The right panel shows the absolute error of the numerically obtained eigenfunctions compared to the analytical solutions.}
+    \label{fig:hydrogen}
 \end{figure}
 
 I like this plot quite a bit since it serves nicely as a summary of the entire problem. The left panel shows the relative deviation of the numerically obtained eigenenergies and analytical values. Note that we've 
@@ -233,17 +234,68 @@ higher than compared to how accurate the eigenenergies are, with errors around $
 actually the fault of the integrator since the \texttt{get\_wavefunction()} method I wrote takes the converged eigenenergy value and performs a final integration to obtain the wavefunction. I have 
 doubts that inaccuracies in the eigenenergy could lead to the accumulation of errors over $10$ orders of magnitude. I think I prefer to pin the blame on the Numerov integrator, which sure is theoretically 
 sixth order, but perhaps other integrators could have done a better job. For example, my beloved PEFRL integrator. Perhaps symplicity (or is it symplexity) could have helped here. Unfortunately, due to limited 
-time I was not able to test this hypothesis. There is another interesting pattern we can spot in the right panel. A diagonal line forms in the plot where the error is significantly lower than the surrounding values. 
+time I was not able to test this hypothesis. \\
+
+There is another interesting pattern we can spot in the right panel. A diagonal line forms in the plot where the error is significantly lower than the surrounding values. 
 This line starts at $l=0, j=1$ and continues upwards and to the right for one value until $l=7$ where I'm not sure if I can comfortably claim that a trend is still visible.
 The beginning of this line starts at the lowest energy level for $l=0$ which is the $n=1$ state and has by far the lowest error of all the states. The next point on the line is at $l=1, j=2$ which corresponds to the $n=3$ state,
-which also has a very low error and so forth. If I understand my indexing notation correctly it would seem that states $j = l+1$ for a given $l$ have a significantly lower error. That corresponds to the states with $n = 2l + 1$, which
+which also has a very low error and so forth. If I understand my indexing notation correctly it would seem that states $j = l+1$ for a given $l$ have a significantly lower error. That corresponds to the states with $n = 2l + 1$,
 which are all odd $n$ states. Interestingly, I think one can imagine the next diagonal for $j = l + 3$ which is barely visible. These would also correspond to odd $n$ states. I think its possible that either the odd states are easier to compute 
 or that the analytical solution and the way I evaluate it via \texttt{scipy.special.genlaguerre()} is different for odd and even $n$ states. Not sure... perhaps I'm looking too deeply into something 
 that is just noise.
 
-\section{Conclusion and Comments}
+\subsection{Graded Index Fiber}
+The dispersion relation $\lambda(k)$ for the graded index fiber problem is shown in \Cref{fig:grin}. This was evaluated using the shooting method with the Numerov integrator, 
+with a $x_{\text{max}} = 10$ and x-axis granularity of $10^5$, $n_{\text{scan}} = 500$ energy guesses per $k$ value and the interval of $k$ values being $0.8 \leq k \leq 10$ discretized into $1000$ values. \\
 
-One oversight that I have regrets over is that some of the plots used a $0$-indexed $n$ for energy levels instead of the more expected $1$-indexed $n$. 
+These were more difficult to find, so I used a midpoint shooting method where I shot from the left and right boundary and matched the wavefunctions at a midpoint. For eigenvalue finding 
+this point was set to $x = 1$ which is the natural boundary where our refractive index changes discontinuously. Instead of using a log-derivative residual as the matching condition 
+I used the Wronskian condition with \texttt{RMS} normalization, which I found to be significantly more stable as it provides a smooth residual landscape as opposed to log-derivative which has massive spikes 
+at thru-zero points. I had plotted these residuals to visually see the difference, but I unfortunately never turned that plot in something I would consider report ready. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{../Images/fiber_dispersion_k0.8_to_10.0_N1000_x10.0_g5.png}
+    \caption{Dispersion relation $\lambda(k)$ for the graded index fiber problem.}
+    \label{fig:grin}
+\end{figure}
+
+I also like this plot quite a bit. All modes show approximately linear dispersion, which is consistent with a waveguide, where if I recall correctly, the effective propagation 
+constant scales linearly with the wave number. Higher modes have a higher propagation constant, which also makes sense since they are more confined to the core of the fiber where the refractive index is higher. 
+There exist cutoff values for $k$ below which a given mode ceases to exist, which is also expected. The single mode region is for $k < 0.99$ where only the fundamental mode exists. I think the true value 
+should be $k_c = 1$ and that the discrepancy is due to numerical inaccuracies, but I think it is close enough. The spacing between modes also seems to be well-behaved and seems to close 
+tighter as $k$ increases. \Cref{fig:grin-zoom} shows a zoom-in of the single mode region, where we can see that the cutoff for the second mode is around $k = 0.99$ as expected.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{../Images/fiber_dispersion_k0.8_to_10.0_N1000_x10.0_g5_zoom.png}
+    \caption{Zoom-in of the dispersion relation $\lambda(k)$ for the single mode region.}
+    \label{fig:grin-zoom}
+\end{figure}
+
+I'm relatively unfamiliar with the physics of optical fibers, so I was interested in how wavefunctions look like for different modes. \Cref{fig:grin-wf} shows a few modes 
+for $k \in\{0.8, 1.0, 5.0, 10.0\}$, where the first one is in the single mode region and the others are in the multi-mode region. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../Images/hh_fiber_modes_k0.8-1.0-5.0-10.0_x10.0_g5.png}
+    \caption{Wavefunctions for different modes of the graded index fiber problem for different values of $k$.}
+    \label{fig:grin-wf}
+\end{figure}
+
+This plot was an utter PITA to obtain. I had so many problems with misbehaving integrators that would only produce oscillatory or divergent wavefunctions, that in the end I 
+found that abusing the midpoint shooting method worked the best. I say abuse since at that point it was more only inward shooting where I \textit{buffered} the midpoint far far 
+away from the core boundary and then matched the wavefunction practically at the origin. That then finally worked to obtain solutions that decay to zero at large $x$ and don't just 
+infinitely oscillate or diverge. Overall I think they came out nicely and agree with what I was able to find online for similar problems. 
+
+\section{Conclusion and Comments}
+This has been another attempt at even further compressing my reports into dense rich plots, as opposed to changing one parameter at a time and then wasting 10 pages of plots. 
+I only worry that the report might perhaps feel too sparse, but I think this task overall felt a bit less rich and sparse compared to last week. That is also another reason why I 
+opted to solve those \textit{sanity check} problems, which did serve a purpose of verifying my implementation and seeing the shooting method applied to a slightly different problem.
+One oversight that I have regrets over is that some of the plots for the well problems used a $0$-indexed $n$ for energy levels instead of the more expected $1$-indexed $n$. Looking back I'd 
+fix that if I had more time. The headache that the shooting method gave me for the fiber problem, in particular the wavefunctions I wanted to see was something. Made me question why 
+even bother shooting at all if finite difference methods or matrix diagonalization methods are so much more stable and robust for eigenvalue problems. Let me know what you think. Particularly 
+regarding report length and report density.
 
 % Add references
 % \newpage

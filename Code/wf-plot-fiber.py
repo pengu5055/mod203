@@ -10,13 +10,13 @@ import os
 from time import time
 
 mpl.style.use("./vrm.mplstyle")
-mpl.use("qtagg")
+mpl.use("tkagg")
 
 ts = time()
 CACHE = True
-x_max = 5
+x_max = 10.0
 granularity = 100000
-k_vals = [1, 2, 5, 10]
+k_vals = [0.8, 1.0, 5.0, 10.0]
 k_vals_str = '-'.join(str(k) for k in k_vals)
 fn = f"./Data/hh_fiber_x{x_max}_k{k_vals_str}_g{int(np.log10(granularity))}.npz"
 
@@ -35,7 +35,7 @@ if not os.path.exists(fn) or not CACHE:
                                 shoot_par_range=lam_range,
                                 shoot_func=shoot_midpoint,
                                 match_idx=core_boundary_idx,
-                                inward_buffer=5.0, n_scan=100, negate_k=True)
+                                inward_buffer=5.0, n_scan=500, negate_k=True)
         eigenvalues_dict[f"k_{k_val}"] = eigenvalues
 
         print(f"Found {len(eigenvalues)} eigenvalues up to x={x_max} ")
@@ -70,7 +70,7 @@ for i, k_val in enumerate(k_vals):
                ha="left", fontsize=8, color='k')
     ax[i].legend()
     ax[i].set_title(f"k={k_val}")
-    ax[i].set_xlim(0, 1.5*x_max)
+    ax[i].set_xlim(0, 10)
 
 
 ax[2].set_xlabel('x')
@@ -79,7 +79,7 @@ ax[0].set_ylabel('R(x)')
 ax[2].set_ylabel('R(x)')
 
 plt.suptitle(f"Fiber Modes for Different k Values")
-parstr = f"Eigenvalues Evaluated with: $x_{{max}}={x_max}$, $N_{{scan}}=100$, $\log_{{10}}(g)={int(np.log10(granularity))}$"
+parstr = f"Eigenvalues Evaluated with: $x_{{max}}={x_max}$, $N_{{scan}}=500$, $\log_{{10}}(g)={int(np.log10(granularity))}$"
 wf_eval_str = f"Functions Evaluated w/: multiple=5, inward_buffer=1000.0, mode='midpoint',\n           core_idx=10, x_min=1e-3, n_eval=10000"
 plt.tight_layout()
 plt.subplots_adjust(top=0.865)
