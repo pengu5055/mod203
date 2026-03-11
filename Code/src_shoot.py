@@ -195,8 +195,8 @@ def finite_well_analytic(x, energy, n, depth, a):
     k = np.sqrt(energy)
     kappa = np.sqrt((depth - energy))
 
-    print(f"Energy: {energy}, k: {k}, kappa: {kappa}")
-    print(np.cos(k*a))
+    # print(f"Energy: {energy}, k: {k}, kappa: {kappa}")
+    # print(np.cos(k*a))
 
     psi = np.zeros_like(x)
     interior = np.abs(x) < a
@@ -211,7 +211,7 @@ def finite_well_analytic(x, energy, n, depth, a):
     else:
         # A\sin(kx) for |x| < width, B\exp(-kappa|x|) for |x| > width
         psi[interior] = np.sin(k * x[interior])
-        psi[exterior] = np.sin(k * a) * np.exp(-kappa * (np.abs(x[exterior]) - a))
+        psi[exterior] = np.sin(k * a) * np.exp(-kappa * (np.abs(x[exterior]) - a)) * np.sign(x[exterior])
 
     # Normalize
     # norm = np.trapezoid(psi**2, x)
