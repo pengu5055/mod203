@@ -116,7 +116,7 @@ cbar2 = fig.colorbar(img2, ax=ax[1], label=r"$\overline{|\psi_{\text{num}} - \ps
 plt.suptitle(f"Accuracy of Numerical Hydrogen Eigenvalues and Wavefunctions Compared to Theory")
 plt.tight_layout()
 plt.subplots_adjust(top=0.82)
-par_str = f"Evaluated for $l\in[{l_min}, {l_max}]$, $r_{{max}}={r_max}$, $g={int(np.log10(granularity))}$, $n_{{scan}}=5000$"
+par_str = f"Evaluated for $l\in[{l_min}, {l_max}]$, $E\in[-0.6, -0.00001]$, $r_{{max}}={r_max}$, $\log_{{10}}(g)={int(np.log10(granularity))}$, $n_{{scan}}=5000$"
 plt.text(0.5, 0.93, par_str, ha='center', va='center', transform=plt.gcf().transFigure, fontsize=10, weight="medium")
 plt.savefig(f"./Images/hydrogen_eigenvalues_l{l_min}_to_{l_max}_r{r_max}_g{int(np.log10(granularity))}.png", dpi=450)
 plt.show()

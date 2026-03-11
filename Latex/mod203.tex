@@ -126,6 +126,7 @@ A state with angular momentum quantum number $l$ will start from the $n = l + 1$
 %
 \begin{equation}
     \psi_{n,l}(x) = \sqrt{\left(\frac{2}{na^*_0}\right)^3\frac{(n-l-1)!}{2n(n+l)!}} e^{-\rho/2} \rho^l L_{n-l-1}^{2l+1}(\rho)\>,
+    \label{eq:hydrogen-ana}
 \end{equation}
 %
 where $\rho = 2x/(na^*_0)$ and $a^*_0$ is the reduced Bohr radius. In our case we've set $a^*_0 = 1$ for simplicity. The functions $L_{n-l-1}^{2l+1}(\rho)$ are the
@@ -158,8 +159,91 @@ Here, $\lambda$ is the propagation constant of the mode. The assignment tasks us
 wave numbers $k$ only to single bound state exists (i.e., \textit{single mode fiber}).
 
 \section{Solution Overview}
+In terms of compute stack, absolutely nothing changed since last week. I still used Python along with \texttt{numpy}, \texttt{scipy} and \texttt{matplotlib} for the numerical computations and plotting.
+The shooting method made use of the root finding capabilities of \texttt{scipy.optimize} and the integration was performed using the Numerov method which I implemented myself. Some of the sanity check 
+problems were solved with a PEFRL (Position Extended Forest-Ruth Like) symplectic integrator which I also implemented myself. I wanted to make sure that the shooting method was working independent of 
+the choice of the integrator. For larger parameter sweeps, I again made use of \texttt{ray} to distribute tasks across multiple CPU cores. \\
+
+Last week I complained about the lack of a \textit{sanity check} problem I could solve to verify that my implementation of the shooting method was working correctly. This week I am fortunate that 
+eigenvalue problems are very common in physics and that there are many well-known problems with known analytical solutions that I can use to verify my implementation. As a start, 
+\Cref{fig:ipw-wf} shows the results of eigenenergies, eigenfunctions and their absolute errors for the infinite potential well problem aka a particle in a box. This problem was 
+evaluated using the PEFRL integrator with step size of $h = 1/10^4$ and a max energy bound of $E_\text{max} = 500$.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../Images/particle_in_box_infinite_upper500_step0.0001.png}
+    \label{fig:ipw-wf}
+    \caption{Eigenfunctions and energies for the infinite potential well problem. The left panel shows the numerically obtained eigenfunctions. The right panel shows the absolute error compared to the known analytical solutions.}
+\end{figure}
+
+We see my beloved PEFRL working its magic in the right panel where I've compared the numerical solution to the analytical one. The agreement is excellent, at machine precision for all except 
+$E_2$ and $E_6$ which have a larger (still very acceptable) error of around $10^{-7}$. To be entirely honest, I'm not sure what causes these two eigenfunctions to have such a larger error, but 
+even with that, the results are very good, and I am quite confident that my implementation of the shooting method is working. Since we're \textit{shooting for eigenvalues}, it might make 
+sense to visualize this process as well. \Cref{fig:ipw-shoot} shows the residuals during the root finding process, where the residuals are defined as the value of the wavefunction at the 
+right boundary $x = 1$ for a given energy as we sweep an interval of guesses. The root finding process tries to find the energy values for which this residual is zero, 
+which corresponds to the correct eigenenergies. We can see how neatly the roots are found at the expected energy levels, and how the residuals behave around those roots. 
+%
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{../Images/shooting_residuals.png}
+    \label{fig:ipw-shoot}
+    \caption{Residuals of the shooting method for the infinite potential well problem. The roots of the residuals correspond to the eigenenergies.}
+\end{figure}
+%
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../Images/particle_in_box_finite_upper100_depth100_step0.0005.png}
+    \label{fig:fpw-wf}
+    \caption{Eigenfunctions and energies for the finite potential well problem. The left panel shows the numerically obtained eigenfunctions. The right panel shows the absolute error compared to the known analytical solutions.}
+\end{figure}
+%
+If we want to be \textbf{extra} sure that everything is working, we can also look at the related problem of the finite potential well, which also has known analytical solutions. 
+\Cref{fig:fpw-wf} shows the results for the finite potential well problem, plotted in the same way as for the infinite potential well. Again evaluated using the PEFRL integrator 
+with step size of $h = 1/10^3$, a depth of $V_0 = 100$ and a max energy bound of $E_\text{max} = 100$. The parameter $x_{\text{max}}$ specifies the extent of the spatial domain 
+over which we solve over. It is larger than what is plotted since due to numerical instability the wavefunctions diverge at large $x$ which we can neatly tuck away. The parameter 
+$A_{\text{scale}}$ specifies the scalar by which we multiply the wavefunctions for better visualization.\\ 
+
+The results are again pretty good but significantly less accurate than for the infinite potential well. I think it is possible that my implementation of how I solved the analyrical solution for the finite potential well might not 
+be entirely correct, which would explain the larger errors since other than that the eigenenergies are in agreement (relative error below $10^{-4}$) with ones obtained via root finding on the transcendental equations. Qualitatively speaking 
+the obtained numerical wavefunctions do look correct, so I still remain confident that things are working. With that I think we should move on to the results for the hydrogen atom and the graded index fiber, which are the main focus of this assignment.
+
 \section{Results}
+\subsection{Hydrogen Atom}
+\Cref{fig:hydrogen} shows the results for the hydrogen atom problem. I opted to create a mega compact plot that compares the numerical and analytical solutions for both eigenenergies and eigenfunctions
+for different values of the angular momentum number  $0 \leq l \leq 9$. Since the number of eigenvalues we find varies with $l$, the y-axis shows the index $j$ of the found eigenenergies for a given $l$.
+Eigenenergies were found using the shooting method with the Numerov integrator, a step size of $h = 1/10^5$, a max radial extent of $r_{\text{max}} = 500$ and $n_{\text{scan}} = 5000$ energy guesses. 
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\textwidth]{../Images/hydrogen_eigenvalues_l0_to_9_r500.0_g5.png}
+    \label{fig:hydrogen}
+    \caption{Eigenenergies and eigenfunctions for the hydrogen atom problem. The left panel shows the numerically obtained eigenenergies (dots) compared to the analytical formula (lines). The right panel shows the absolute error of the numerically obtained eigenfunctions compared to the analytical solutions.}
+\end{figure}
+
+I like this plot quite a bit since it serves nicely as a summary of the entire problem. The left panel shows the relative deviation of the numerically obtained eigenenergies and analytical values. Note that we've 
+said that for a given $l$, the energy levels start from $n = l + 1$, which means that for $l = 0$ we should find eigenenergies starting from $n = 1$, for $l = 1$ we should find eigenenergies starting from $n = 2$ and so on.
+Overall we find very good agreement with the analytical formula, with relative errors below $10^{-4}$ for almost all found eigenenergies, except the last couple of eigenenergies for each $l$ which have a larger error of up to $10^{-1}$.
+Most of the lower eigenenergies had a very low relative error of around $10^{-10}$ or even lower, which is quite impressive. An interesting asymmetry appears at $l=0$ however where 
+all values, even ones at low $n$, have a significantly larger error than for $l > 0$. I think perhaps what might explain this is that out of all of these options, $l = 0$ has the most \textit{singular} behavior at the origin 
+due to the centrifugal term being absent, which appears to make it more difficult to solve numerically. The value at $l=3, j=8$ is also interesting since it seems like a numerical fluke where we found an eigenenergy that is abnormaly 
+(given its surrounding values) close to the analytical value. \\
+
+The right panel shows the absolute error of the numerically obtained eigenfunctions compared to the analytical solutions as described in \Cref{eq:hydrogen-ana}. Here the errors are significantly 
+higher than compared to how accurate the eigenenergies are, with errors around $10^{-3}$ for the lower eigenfunctions and up to around $10^{-1}$ for the higher ones. I suspect that this is 
+actually the fault of the integrator since the \texttt{get\_wavefunction()} method I wrote takes the converged eigenenergy value and performs a final integration to obtain the wavefunction. I have 
+doubts that inaccuracies in the eigenenergy could lead to the accumulation of errors over $10$ orders of magnitude. I think I prefer to pin the blame on the Numerov integrator, which sure is theoretically 
+sixth order, but perhaps other integrators could have done a better job. For example, my beloved PEFRL integrator. Perhaps symplicity (or is it symplexity) could have helped here. Unfortunately, due to limited 
+time I was not able to test this hypothesis. There is another interesting pattern we can spot in the right panel. A diagonal line forms in the plot where the error is significantly lower than the surrounding values. 
+This line starts at $l=0, j=1$ and continues upwards and to the right for one value until $l=7$ where I'm not sure if I can comfortably claim that a trend is still visible.
+The beginning of this line starts at the lowest energy level for $l=0$ which is the $n=1$ state and has by far the lowest error of all the states. The next point on the line is at $l=1, j=2$ which corresponds to the $n=3$ state,
+which also has a very low error and so forth. If I understand my indexing notation correctly it would seem that states $j = l+1$ for a given $l$ have a significantly lower error. That corresponds to the states with $n = 2l + 1$, which
+which are all odd $n$ states. Interestingly, I think one can imagine the next diagonal for $j = l + 3$ which is barely visible. These would also correspond to odd $n$ states. I think its possible that either the odd states are easier to compute 
+or that the analytical solution and the way I evaluate it via \texttt{scipy.special.genlaguerre()} is different for odd and even $n$ states. Not sure... perhaps I'm looking too deeply into something 
+that is just noise.
+
 \section{Conclusion and Comments}
+
+One oversight that I have regrets over is that some of the plots used a $0$-indexed $n$ for energy levels instead of the more expected $1$-indexed $n$. 
 
 % Add references
 % \newpage

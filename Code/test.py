@@ -12,58 +12,63 @@ from time import time
 mpl.style.use("./vrm.mplstyle")
 mpl.use("tkagg")
 
-ts = time()
-CACHE = True
-r_max = 100
-granularity = 10000
-r_range = np.linspace(1e-3, r_max, granularity)
+l_min = 0
+l_max = 9
+r_max = 500.0
+granularity = 100000
 
-k_func = lambda r, E: k_hydrogen(r, E, l=0)
-seed_func_out = lambda r, E: seed_hydrogen(r, E, l=0)
-seed_func_in = lambda r, E, idx: seed_hydrogen_inward(r, E, l=0, start_idx=idx)
+fn = f"./Data/hydrogen_eigenvalues_l{l_min}_to_{l_max}_r{r_max}_g{int(np.log10(granularity))}.npz"
 
-fn = f"./Data/eigenvalues_r{r_max}_g{int(np.log10(granularity))}.npy"
+data = np.load(fn, allow_pickle=True)
+l_vals = data["l_vals"]
+eigenvalues = [data[f"l_{l_val}"] for l_val in l_vals]
 
-if not os.path.exists(fn) or not CACHE:
-    eigenvalues = find_eigenvalues(r_range, k_func, seed_func_out, 
-                                   shoot_par_range=(-0.6, -0.01), 
-                                   shoot_func=shoot,
-                                   n_scan=1000,
-                                   renorm_every=10)
+for l_val in l_vals:
+    print(f"l={l_val}: Found {len(data[f'l_{l_val}'])} eigenvalues: {data[f'l_{l_val}']}")
 
-    print(f"Found {len(eigenvalues)} eigenvalues up to r={r_max} ")
-    for i, e in enumerate(eigenvalues):
-        print(f"E_{i}: {e:.6f}")
-    np.save(fn, eigenvalues)
-else:
-    eigenvalues = np.load(fn)
+# Now stack l values into (l, max_eigenvalues) array for plotting
+max_eigenvalues = max(len(evs) for evs in eigenvalues)
+eigenvalues_array = np.full((len(l_vals), max_eigenvalues), np.nan)  # Fill with NaN for missing values
+for i, evs in enumerate(eigenvalues):
+    eigenvalues_array[i, :len(evs)] = evs
 
-te = time()
-print(f"Time taken: {te - ts:.2f} seconds")
+rel_errs = np.full_like(eigenvalues_array, np.nan)
+
+# Subtract theoretical values E_n = -1/(2*n^2), n_min = l + 1
+for i, l_val in enumerate(l_vals):
+    n_min = l_val + 1
+    for j in range(max_eigenvalues):
+        n = n_min + j
+        theoretical_E = -1/(2*n**2)
+        if not np.isnan(eigenvalues_array[i, j]):
+            rel_errs[i, j] = np.abs(eigenvalues_array[i, j] - theoretical_E) / np.abs(theoretical_E)
+
+# Take abs deviations
+eigenvalues_array = np.abs(eigenvalues_array)
+
+# Get wavefunctions for j = l + 1
+states = []
+for i, l_val in enumerate(l_vals):
+    l_eig = eigenvalues[i]
+    x_ranges, wf_shoot = get_hydrogen_wavefunctions(l_eig, l=l_val, multiple=7*(i/2+1), r_min=1e-2)
+
+    states.append((x_ranges[i], wf_shoot[i]))
+
+states = states[:5]
 
 # Plotting
 colors = cmr.take_cmap_colors("cmr.tropical", len(eigenvalues), cmap_range=(0.0, 0.8))
-fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+fig, ax = plt.subplots(1, 1, figsize=(12, 5))
+ax = [ax]
 
-xs, wfs = get_hydrogen_wavefunctions(eigenvalues, 0, idx=[0, 1, 2, 3, 4], multiple=[10, 5, 5, 5, 5])
-for i, (x, wave) in enumerate(zip(xs, wfs)):
-    print(f"Plotting n={i+1} with E={eigenvalues[i]:.6f}")
-    analytic = hydrogen_analytic(x, n=i+1, l=0)
-    ax[0].plot(x, wave, label=f"n={i+1}", color=colors[i])
-    ax[0].plot(x, analytic, label=f"Analytic n={i+1}", linestyle="--", color=colors[i])
+for i, (x, wave) in enumerate(states):
+    analytic = hydrogen_analytic(x, n=i+1, l=i)
+    ax[0].plot(x, wave, color=colors[i])
 
-    ax[1].plot(x, aerr(analytic, wave), label=f"n={i+1}", color=colors[i])
 
 ax[0].set_title("Radial Wavefunctions")
 ax[0].set_xlabel("r")
-ax[0].set_ylabel("u(r)")
+ax[0].set_ylabel("R(r)")
 ax[0].legend()
-
-ax[1].set_title("Absolute Error")
-ax[1].set_xlabel("r")
-ax[1].set_ylabel("k(r)")
-ax[1].legend()
-ax[1].set_yscale("log")
-
 plt.tight_layout()
 plt.show()
