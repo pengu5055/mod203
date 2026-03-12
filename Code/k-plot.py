@@ -23,6 +23,12 @@ data = np.load(fn, allow_pickle=True)
 k_vals = data["k_vals"]
 eigenvalues = [data[f"k_{i}"] for i in range(len(k_vals))]
 
+# Print eigenvalues for each k
+for k_val, evs in zip(k_vals, eigenvalues):
+    print(f"$k={k_val}$: Eigenvalues: {', '.join(f'{ev:.6f}' for ev in evs)}")
+
+quit()
+
 fig, ax = plt.subplots(figsize=(8, 6))
 idx_max = max(len(evs) for evs in eigenvalues)
 colors = cmr.take_cmap_colors("cmr.tropical", idx_max, cmap_range=(0.0, 0.8))
