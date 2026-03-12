@@ -6,11 +6,12 @@ from src import *
 import ray 
 import argparse
 
+R_POINTS = 100000
 
 @ray.remote
 def hydrogen_worker_rmax(params):
     i, l_val, r_max, n_scan, granularity = params
-    r_range = np.linspace(1e-3, r_max, granularity)
+    r_range = np.linspace(1e-3, r_max, R_POINTS)
 
     k_func = lambda r, E: k_hydrogen(r, E, l=l_val)
     seed_out = lambda r, E: seed_hydrogen(r, E, l=l_val)
