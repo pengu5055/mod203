@@ -51,7 +51,7 @@ def main():
             print(f"Error processing l={l_val}: {e}")
 
     # Save results to file
-    fn = f"./Data/hydrogen_eigenvalues_l{args.l_min}_to_{args.l_max}_r{args.r_max}_g{int(np.log10(args.granularity))}.npz"
+    fn = f"./Data/hydrogen_eigenvalues_l{args.l_min}_to_{args.l_max}_r{args.r_max}_g{int(np.log10(args.granularity))}_ns{int(args.n_scan)}.npz"
     np.savez(fn, **result_dict, l_vals=l_vals)
     print(f"Results saved to {fn}")
     
